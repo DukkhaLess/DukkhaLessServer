@@ -1,8 +1,9 @@
 module Main where
 
-import Protolude
+import           Protolude (($), IO)
+import Web.Scotty
 
 main :: IO ()
-main = blah "Hi"
-
-blah = putStrLn
+main = scotty 3000 $ do
+  get "/:word" $ do
+    html "Hi"
