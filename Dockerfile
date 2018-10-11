@@ -11,7 +11,7 @@ RUN stack build
 
 FROM ubuntu:18.04
 RUN mkdir -p /opt/app
-WORKDIR /opt/app
+RUN cd /opt/app
 RUN apt-get update && apt-get install -y \
   ca-certificates \
   libgmp-dev
