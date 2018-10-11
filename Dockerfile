@@ -1,11 +1,12 @@
 FROM haskell:8 as build
 WORKDIR /opt/build
 RUN cabal update
-COPY ./src /opt/build/src
-COPY ./app /opt/build/app
-COPY ./test /opt/build/test
-COPY ./dukkhaless.cabal /opt/build/dukkhaless.cabal
-COPY ./stack.yaml  /opt/build/stack.yaml
+COPY LICENSE ./LICENSE
+COPY src /opt/build/src
+COPY app /opt/build/app
+COPY test /opt/build/test
+COPY dukkhaless.cabal /opt/build/dukkhaless.cabal
+COPY stack.yaml  /opt/build/stack.yaml
 RUN stack build
 
 FROM ubuntu:18.04
