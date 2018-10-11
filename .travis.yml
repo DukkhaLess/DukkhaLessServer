@@ -1,0 +1,11 @@
+language: minimal
+dist: trusty
+sudo: required
+addons:
+  apt:
+    packages:
+      - docker-ce
+script:
+  - sh docker_deploy.sh
+after_script:
+  - docker logout
