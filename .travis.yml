@@ -9,7 +9,6 @@ install:
   - sh scripts/docker_build.sh
 script:
   - sh scripts/docker_test.sh
-deploy:
   - sh scripts/docker_deploy.sh
 after_script:
   - docker logout
