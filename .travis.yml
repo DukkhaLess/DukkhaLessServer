@@ -5,9 +5,8 @@ addons:
   apt:
     packages:
       - docker-ce
-install: 
-  - sh scripts/docker_build.sh
 script:
+  - sh scripts/docker_build.sh
   - sh scripts/docker_test.sh
   - sh scripts/docker_deploy.sh
 after_script:
