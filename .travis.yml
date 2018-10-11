@@ -8,6 +8,6 @@ addons:
 script:
   - sh scripts/docker_build.sh
   - sh scripts/docker_test.sh
+after_success:
   - sh scripts/docker_deploy.sh
-after_script:
   - docker logout
