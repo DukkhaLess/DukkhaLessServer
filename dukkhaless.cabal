@@ -12,8 +12,7 @@ category:            Web
 build-type:          Simple
 cabal-version:       >= 1.10
 
-executable dukkhaless
-  main-is:             Main.hs
+library
   other-modules:       
   build-depends:       base >=4.6 && < 5,
                        wai >= 3.0.0 && <3.3,
@@ -25,11 +24,34 @@ executable dukkhaless
                        blaze-markup,
                        aeson,
                        protolude
+  hs-source-dirs:      app
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+  exposed-modules:     App
+
+
+executable dukkhaless-app
+  main-is:             Main.hs
+  other-modules:       
+  build-depends:       base >=4.6 && < 5
+                     , protolude
+                     , dukkhaless
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
-                       OverloadedStrings
+                     , OverloadedStrings
 
+test-suite dukkhaless-test
+  main-is:             Tests.hs
+  hs-source-dirs:      test
+  build-depends:       base >=4.6 && < 5
+                     , protolude
+                     , dukkhaless
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+ 
 source-repository head
    type: git
    location: https://github.com/DukkhaLess/DukkhaLessServer

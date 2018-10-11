@@ -1,9 +1,7 @@
 module Main where
 
 import           Protolude (($), IO)
-import Web.Scotty
+import           App (app)
 
 main :: IO ()
-main = scotty 3000 $ do
-  get "/:word" $ do
-    html "Hi"
+main = app 
