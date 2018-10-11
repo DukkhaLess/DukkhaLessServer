@@ -25,6 +25,7 @@ library
                        aeson,
                        protolude
   hs-source-dirs:      app
+  ghc-options:         -Wall -Werror
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
@@ -33,11 +34,11 @@ library
 
 executable dukkhaless-app
   main-is:             Main.hs
-  other-modules:       
   build-depends:       base >=4.6 && < 5
                      , protolude
                      , dukkhaless
   hs-source-dirs:      src
+  ghc-options:         -Wall -Werror
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
@@ -48,6 +49,8 @@ test-suite dukkhaless-test
   build-depends:       base >=4.6 && < 5
                      , protolude
                      , dukkhaless
+  type:                exitcode-stdio-1.0
+  ghc-options:         -Wall -Werror
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
