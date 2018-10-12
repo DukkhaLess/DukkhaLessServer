@@ -7,7 +7,7 @@ COPY app /opt/build/app
 COPY test /opt/build/test
 COPY dukkhaless.cabal /opt/build/dukkhaless.cabal
 COPY stack.yaml  /opt/build/stack.yaml
-RUN stack build
+RUN stack build && stack test
 
 FROM ubuntu:18.04
 WORKDIR /opt/app
