@@ -8,7 +8,7 @@ else
     export DOCKER_BRANCH_TAG=$TRAVIS_PULL_REQUEST_BRANCH
 fi
 
-if [ "$DOCKER_BRANCH" = "master" ]
+if [ "$DOCKER_BRANCH_TAG" = "master" ]
 then
   docker build -t $DOCKER_REPOSITORY:$TRAVIS_COMMIT -t $DOCKER_REPOSITORY:$DOCKER_BRANCH_TAG -t $DOCKER_REPOSITORY:latest .
 else
