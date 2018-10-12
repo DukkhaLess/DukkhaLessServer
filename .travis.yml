@@ -7,7 +7,6 @@ addons:
       - docker-ce
 script:
   - sh scripts/docker_build.sh
-  - sh scripts/docker_test.sh
 after_success:
   - sh scripts/docker_deploy.sh
   - docker logout
