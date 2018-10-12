@@ -28,7 +28,6 @@ library
   ghc-options:         -Wall -Werror
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
   exposed-modules:     App
 
 
@@ -41,7 +40,6 @@ executable dukkhaless-app
   ghc-options:         -Wall -Werror
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
 
 test-suite dukkhaless-test
   main-is:             Tests.hs
@@ -53,7 +51,6 @@ test-suite dukkhaless-test
   ghc-options:         -Wall -Werror
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
-                     , OverloadedStrings
  
 source-repository head
    type: git

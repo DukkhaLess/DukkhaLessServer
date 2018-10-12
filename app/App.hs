@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module App where
 
 import           Protolude (($), IO)
