@@ -1,7 +1,7 @@
 module Main where
 
-import           Protolude (IO)
-import           App (app)
+import           Protolude                      ( IO )
+import           App                            ( app )
 
 main :: IO ()
-main = app 
+main = app
