@@ -1,9 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Types where
 
-import           Protolude
+import           Protolude                      ( Eq
+                                                , Show
+                                                , ($)
+                                                , (<*>)
+                                                , (<$>)
+                                                , identity
+                                                , Generic
+                                                )
 import           Control.Lens.Combinators
 import           Data.Aeson
+import           Data.Text.Lazy                 ( Text )
 
 newtype Username = Username Text
   deriving (Eq, Show, Generic)
@@ -41,6 +49,11 @@ data LoginUser = LoginUser Username RawPassword
 instance FromJSON LoginUser where
   parseJSON = withObject "loginUser" $ \o ->
     LoginUser <$> o .: "username" <*> o .: "password"
+
+class HasText a where _text :: Lens' a Text
+instance HasText Text where _text = identity
+instance HasText RawPassword where _text = lens (\(RawPassword t) -> t) (\_ t -> RawPassword t)
+instance HasText Username where _text = lens (\(Username t) -> t) (\_ t -> Username t)
 
 class HasRawPassword a where rawPassword :: Lens' a RawPassword
 instance HasRawPassword RawPassword where rawPassword = identity
