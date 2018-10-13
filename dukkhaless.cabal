@@ -20,9 +20,8 @@ library
                        scotty,
                        clay,
                        text,
-                       blaze-html,
-                       blaze-markup,
                        aeson,
+                       http-types,
                        lens,
                        protolude
   hs-source-dirs:      app
