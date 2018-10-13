@@ -30,12 +30,23 @@ logger _          = logStdoutDev
 confFileName :: Environment -> Text
 confFileName = toLower . pack . flip (++) ".conf" . show
 
+data DatabaseUser
+  = DatabaseUser
+    { username :: Text
+    , password :: Text
+    , schema :: Text
+    }
+
+data DatabaseConfig
+  = DatabaseConfig
+    { rootAccount :: DatabaseUser
+    , applicationAccount :: DatabaseUser
+    , postgresPort :: Int
+    , postgresHost :: Text
+    }
+
 data Config
   = Config
-    { postgresUsername :: Text
-    , postgresPassword :: Text
-    , postgresHost :: Text
-    , postgresPort :: Int
-    , postgresDatabase :: Text
-    , signingKeyString :: Text
+    { databaseConfig :: DatabaseConfig
+    , signingKey :: Text
     }

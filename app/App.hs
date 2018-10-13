@@ -14,9 +14,9 @@ import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Web.Scotty
 import           Types
-import           Conf
+import qualified Conf                          as Conf
 
-app :: Environment -> IO ()
+app :: Conf.Environment -> IO ()
 app _ = scotty 4000 $ do
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logStdoutDev
