@@ -73,3 +73,4 @@ instance HasUsername LoginUser where username = lens (\(LoginUser u _) -> u) (\(
 instance HasUsername RegisterUser where username = lens (\(RegisterUser u _ _) -> u) (\(RegisterUser _ p k) u -> RegisterUser u p k)
 
 class HasPublicKey a where publicKey :: Lens' a PublicKey
+instance HasPublicKey RegisterUser where publicKey = lens (\(RegisterUser _ _ k) -> k) (\(RegisterUser u p _) k -> RegisterUser u p k)
