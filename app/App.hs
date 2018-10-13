@@ -11,8 +11,10 @@ import           Types
 
 app :: IO ()
 app = scotty 3000 $ do
-  get "/:word" $ do
-    html "Hi"
+  get "/:word" $ html "Hi"
   post "/login" $ do
     loginUser <- jsonData :: ActionM LoginUser
     text $ loginUser ^. (username . _text)
+  post "/register" $ do
+    registerUser <- jsonData :: ActionM RegisterUser
+    text $ registerUser ^. (username . _text)
