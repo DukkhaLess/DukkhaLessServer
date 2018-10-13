@@ -14,9 +14,10 @@ import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Web.Scotty
 import           Types
+import           Conf
 
-app :: IO ()
-app = scotty 4000 $ do
+app :: Environment -> IO ()
+app _ = scotty 4000 $ do
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logStdoutDev
   get "/:word" $ html "Hi"

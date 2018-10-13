@@ -14,7 +14,6 @@ cabal-version:       >= 1.10
 
 library
   other-modules:       Types
-                     , Conf
   build-depends:       base >=4.6 && < 5
                      , wai >= 3.0.0 && <3.3
                      , wai-extra >=3.0.0 && < 3.3
@@ -31,6 +30,7 @@ library
   default-extensions:  NoImplicitPrelude
                      , DeriveGeneric
   exposed-modules:     App
+                     , Conf
 
 
 executable dukkhaless-app

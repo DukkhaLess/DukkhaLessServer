@@ -20,7 +20,6 @@ import           Network.Wai                    ( Middleware )
 
 data Environment
   = Development
-  | Staging
   | Production
   deriving (Read, Show)
 
@@ -38,4 +37,5 @@ data Config
     , postgresHost :: Text
     , postgresPort :: Int
     , postgresDatabase :: Text
+    , signingKeyString :: Text
     }
