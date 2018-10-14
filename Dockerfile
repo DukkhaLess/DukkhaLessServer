@@ -1,6 +1,8 @@
 FROM haskell:8 as build
 WORKDIR /opt/build
 RUN cabal update
+RUN apt-get update && apt-get install -y \
+  libpq-dev
 COPY LICENSE ./LICENSE
 COPY src /opt/build/src
 COPY app /opt/build/app
@@ -13,7 +15,8 @@ FROM ubuntu:18.04
 WORKDIR /opt/app
 RUN apt-get update && apt-get install -y \
   ca-certificates \
-  libgmp-dev
+  libgmp-dev \
+  libpq-dev
 COPY --from=build /opt/build/.stack-work/install/x86_64-linux/lts-12.11/8.4.3/bin/dukkhaless-app /opt/app/dukkhaless-app
 COPY production.conf /opt/app/production.conf
 COPY development.conf /opt/app/development.conf
