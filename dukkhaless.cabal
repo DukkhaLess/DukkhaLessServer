@@ -19,8 +19,10 @@ library
                      , wai-extra >=3.0.0 && < 3.3
                      , scotty
                      , clay
+                     , configurator
                      , text
                      , aeson
+                     , transformers
                      , http-types
                      , lens
                      , protolude
