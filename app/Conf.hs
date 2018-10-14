@@ -6,16 +6,17 @@ import           Protolude                      ( show
                                                 , (++)
                                                 , Read
                                                 , Show
-                                                , Int
                                                 , Maybe
                                                 , (.)
                                                 , IO
                                                 , return
                                                 , ($)
                                                 )
+import           Data.Word                      ( Word16 )
 import           Control.Monad.Trans.Maybe      ( MaybeT(..)
                                                 , runMaybeT
                                                 )
+import           Data.String                    ( String )
 import           Data.Text.Lazy                 ( toLower
                                                 , pack
                                                 , Text
@@ -42,17 +43,17 @@ confFileName = toLower . pack . flip (++) ".conf" . show
 
 data DatabaseUser
   = DatabaseUser
-    { username :: Text
-    , password :: Text
-    , schema :: Text
+    { username :: String
+    , password :: String
+    , schema :: String
     }
 
 data DatabaseConfig
   = DatabaseConfig
     { rootAccount :: DatabaseUser
     , applicationAccount :: DatabaseUser
-    , postgresPort :: Int
-    , postgresHost :: Text
+    , postgresPort :: Word16
+    , postgresHost :: String
     }
 
 data Config
