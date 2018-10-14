@@ -7,12 +7,15 @@ import           Protolude                      ( show
                                                 , Read
                                                 , Show
                                                 , Int
+                                                , Maybe
                                                 , (.)
                                                 , IO
                                                 , return
                                                 , ($)
                                                 )
-import           Control.Monad.Trans.Maybe      ( MaybeT(..) )
+import           Control.Monad.Trans.Maybe      ( MaybeT(..)
+                                                , runMaybeT
+                                                )
 import           Data.Text.Lazy                 ( toLower
                                                 , pack
                                                 , Text
@@ -59,17 +62,17 @@ data Config
     }
 
 
-makeConfig :: C.Config -> MaybeT IO Config
-makeConfig conf = do
+makeConfig :: C.Config -> IO (Maybe Config)
+makeConfig conf = runMaybeT $ do
   dbConf <- do
     root <- do
       name     <- MaybeT $ C.lookup conf "postgres.root.username"
-      pass <- MaybeT $ C.lookup conf "postgres.root.password"
+      pass     <- MaybeT $ C.lookup conf "postgres.root.password"
       database <- MaybeT $ C.lookup conf "postgres.root.database"
       return $ Conf.DatabaseUser name pass database
     app <- do
       name     <- MaybeT $ C.lookup conf "postgres.app.username"
-      pass <- MaybeT $ C.lookup conf "postgres.app.password"
+      pass     <- MaybeT $ C.lookup conf "postgres.app.password"
       database <- MaybeT $ C.lookup conf "postgres.app.database"
       return $ Conf.DatabaseUser name pass database
     hostname <- MaybeT $ C.lookup conf "postgres.host"
