@@ -42,6 +42,7 @@ app' _ = scotty 4000 $ do
   post "/register" $ do
     registerUser <- jsonData :: ActionM RegisterUser
     text $ registerUser ^. (username . _text)
+
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix (("api" : tail), queries) _ = (tail, queries)
 removeApiPrefix paq                       _ = paq
