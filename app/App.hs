@@ -9,13 +9,11 @@ import           Protolude                      ( IO
                                                 , putStrLn
                                                 , show
                                                 , (++)
-                                                , Bool(..)
-                                                , (==)
                                                 )
 import           Control.Lens
-import qualified Data.ByteString               as BS
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack )
+import           Database.Beam.Postgres         ( connect )
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdoutDev
@@ -47,17 +45,20 @@ app env = do
 
 
 app' :: Conf.Config -> Middleware -> IO ()
-app' conf logger = scotty 4000 $ do
-  middleware $ rewritePureWithQueries removeApiPrefix
-  middleware logger
-  middleware $ gzip def
-  get "/:word" $ html "Hi"
-  post "/login" $ do
-    loginUser <- jsonData :: ActionM LoginUser
-    text $ loginUser ^. (username . _text)
-  post "/register" $ do
-    registerUser <- jsonData :: ActionM RegisterUser
-    text $ registerUser ^. (username . _text)
+app' conf logger = do
+  connection <- connect
+    $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
+  scotty 4000 $ do
+    middleware $ rewritePureWithQueries removeApiPrefix
+    middleware logger
+    middleware $ gzip def
+    get "/:word" $ html "Hi"
+    post "/login" $ do
+      loginUser <- jsonData :: ActionM LoginUser
+      text $ loginUser ^. (username . _text)
+    post "/register" $ do
+      registerUser <- jsonData :: ActionM RegisterUser
+      text $ registerUser ^. (username . _text)
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)

@@ -15,18 +15,22 @@ cabal-version:       >= 1.10
 library
   other-modules:       Types
                      , Schema
+                     , Schema.V0001
   build-depends:       base >=4.6 && < 5
                      , wai >= 3.0.0 && <3.3
                      , wai-extra >=3.0.0 && < 3.3
                      , wai-cors >= 0.2.6 && < 1.0
+                     , warp >= 3.2.25 && < 3.3
                      , scotty
                      , clay
                      , configurator
                      , data-default >= 0.7.1.1 && < 1.0
                      , text
+                     , time
                      , aeson
                      , beam-core
                      , beam-postgres
+                     , beam-migrate
                      , transformers
                      , http-types
                      , lens
