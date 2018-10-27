@@ -58,7 +58,7 @@ migration
        PgCommandSyntax
        (CheckedDatabaseSettings Postgres DukkhalessDb)
 migration () = DukkhalessDb <$> createTable
-  "user"
+  "users"
   (User (field "userUuid" uuid notNull unique)
         (field "usrUsername" (varchar (Just 50)) notNull unique)
         (field "userHashedPassword" (varchar (Just 256)) notNull)
