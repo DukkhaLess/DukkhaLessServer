@@ -21,6 +21,7 @@ import           Data.Text.Lazy                 ( toLower
                                                 , pack
                                                 , Text
                                                 )
+import           Data.ByteString                ( ByteString )
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdout
                                                 , logStdoutDev
@@ -56,10 +57,16 @@ data DatabaseConfig
     , postgresHost :: String
     }
 
+data HttpConfig
+  = HttpConfig
+    { domain :: ByteString
+    }
+
 data Config
   = Config
     { databaseConfig :: DatabaseConfig
     , signingKey :: Text
+    , httpSettings :: HttpConfig
     }
 
 
@@ -79,6 +86,9 @@ makeConfig conf = runMaybeT $ do
     hostname <- MaybeT $ C.lookup conf "postgres.host"
     port     <- MaybeT $ C.lookup conf "postgres.port"
     return $ Conf.DatabaseConfig root app port hostname
+  httpConfig <- do
+    dmn <- MaybeT $ C.lookup conf "http.domain"
+    return $ HttpConfig dmn
   sk <- MaybeT $ C.lookup conf "crypto.signingKey"
-  return $ Conf.Config dbConf sk
+  return $ Conf.Config dbConf sk httpConfig
 
