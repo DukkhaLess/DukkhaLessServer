@@ -6,18 +6,17 @@ import           Protolude                      ( IO
                                                 , ($)
                                                 , (.)
                                                 , (>>=)
-                                                , Maybe(..)
-                                                , putStrLn
-                                                , show
                                                 , (^)
                                                 , Either
-                                                , (++)
                                                 , Applicative
                                                 , flip
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
+import           Control.Monad.Trans.Maybe      ( MaybeT(..)
+                                                )
+import Control.Monad.Trans (lift)
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
@@ -52,17 +51,20 @@ import           Crypto.Random.DRBG             ( HashDRBG
 import           Crypto.Random                  ( GenError )
 
 app :: Conf.Environment -> IO ()
-app env = do
-  config <-
-    C.load [C.Required $ unpack $ Conf.confFileName env] >>= Conf.makeConfig
-  case config of
-    Just conf -> app'
-      conf
+app env = void $ runMaybeT $ do
+  conf <- MaybeT (C.load [C.Required $ unpack $ Conf.confFileName env]
+        >>= Conf.makeConfig )
+  lift $ E.bracket
+    ( Pg.connect
+    $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
+    )
+    Pg.close
+    (\conn -> app'
+      conn 
       (case env of
         Production  -> logStdout
         Development -> logStdoutDev
-      )
-    Nothing -> putStrLn $ "Config file not found for environment: " ++ show env
+      ))
 
 newtype AppState =
   AppState
@@ -82,31 +84,25 @@ gets f = ask >>= liftIO . readTVarIO >>= return . f
 modify :: (AppState -> AppState) -> WebM ()
 modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
-app' :: Conf.Config -> Middleware -> IO ()
-app' conf logger =
-  E.bracket
-      ( Pg.connect
-      $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
-      )
-      Pg.close
-    $ \conn -> do
-        initialEntropy <- getEntropy 256
-        let _ =
-              newGenAutoReseed initialEntropy (2 ^ 48) :: Either
-                  GenError
-                  (GenAutoReseed HashDRBG HashDRBG)
-        runMigrations conn
-        scotty 4000 $ do
-          middleware $ rewritePureWithQueries removeApiPrefix
-          middleware logger
-          middleware $ gzip def
-          get "/:word" $ html "Hi"
-          post "/login" $ do
-            loginUser <- jsonData :: ActionM LoginUser
-            text $ fromStrict $ loginUser ^. (username . _text)
-          post "/register" $ do
-            registerUser <- jsonData :: ActionM RegisterUser
-            text $ fromStrict $ registerUser ^. (username . _text)
+app' :: Pg.Connection -> Middleware -> IO ()
+app' conn logger = do
+  initialEntropy <- getEntropy 256
+  let _ =
+        newGenAutoReseed initialEntropy (2 ^ 48) :: Either
+            GenError
+            (GenAutoReseed HashDRBG HashDRBG)
+  runMigrations conn
+  scotty 4000 $ do
+    middleware $ rewritePureWithQueries removeApiPrefix
+    middleware logger
+    middleware $ gzip def
+    get "/:word" $ html "Hi"
+    post "/login" $ do
+      loginUser <- jsonData :: ActionM LoginUser
+      text $ fromStrict $ loginUser ^. (username . _text)
+    post "/register" $ do
+      registerUser <- jsonData :: ActionM RegisterUser
+      text $ fromStrict $ registerUser ^. (username . _text)
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
