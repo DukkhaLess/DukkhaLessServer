@@ -1,21 +1,26 @@
 module Crypto where
 
-import Prelude (($), Either)
-import           Data.Text.Short                ( ShortText
-                                                , toText
+import           Prelude                        ( ($)
+                                                , Either
+                                                , fmap
                                                 )
-import           Data.Text                      ( Text )
-import Data.Text.Encoding (encodeUtf8)
+import           Data.ByteString                ( ByteString )
+import           Data.Text.Encoding             ( encodeUtf8 )
 import           Crypto.Argon2                  ( verifyEncoded
                                                 , hashEncoded
                                                 , defaultHashOptions
                                                 , Argon2Status
                                                 )
-import           Types                          ( RawPassword
-                                                , HashedPassword
+import           Types                          ( RawPassword(..)
+                                                , HashedPassword(..)
                                                 , _text
                                                 )
 import           Control.Lens
 
-hashPassword :: RawPassword -> Either Argon2Status HashedPassword
-hashPassword pass = hashEncoded defaultHashOptions (encodeUtf8 (pass ^. _text))
+hashPassword :: ByteString -> RawPassword -> Either Argon2Status HashedPassword
+hashPassword salt pass = fmap HashedPassword
+  $ hashEncoded defaultHashOptions (encodeUtf8 (pass ^. _text)) salt
+
+verifyPassword :: HashedPassword -> RawPassword -> Argon2Status
+verifyPassword (HashedPassword pass) (RawPassword raw) =
+  verifyEncoded pass (encodeUtf8 raw)
