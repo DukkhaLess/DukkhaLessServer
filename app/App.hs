@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-type-defaults #-}
 module App where
 
 import           Protolude                      ( IO
@@ -8,6 +9,8 @@ import           Protolude                      ( IO
                                                 , Maybe(..)
                                                 , putStrLn
                                                 , show
+                                                , (^)
+                                                , Either
                                                 , (++)
                                                 )
 import qualified Control.Exception             as E
@@ -33,6 +36,12 @@ import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
 import qualified Data.Configurator             as C
 import           Schema                         ( runMigrations )
+import           System.Entropy                 ( getEntropy )
+import           Crypto.Random.DRBG             ( HashDRBG
+                                                , GenAutoReseed
+                                                , newGenAutoReseed
+                                                )
+import           Crypto.Random                  ( GenError )
 
 app :: Conf.Environment -> IO ()
 app env = do
@@ -56,6 +65,11 @@ app' conf logger =
       )
       Pg.close
     $ \conn -> do
+        initialEntropy <- getEntropy 128
+        let _ =
+              newGenAutoReseed initialEntropy (2 ^ 48) :: Either
+                  GenError
+                  (GenAutoReseed HashDRBG HashDRBG)
         runMigrations conn
         scotty 4000 $ do
           middleware $ rewritePureWithQueries removeApiPrefix
