@@ -59,9 +59,9 @@ migration
        (CheckedDatabaseSettings Postgres DukkhalessDb)
 migration () = DukkhalessDb <$> createTable
   "users"
-  (User (field "userUuid" uuid notNull unique)
-        (field "usrUsername" (varchar (Just 50)) notNull unique)
-        (field "userHashedPassword" (varchar (Just 256)) notNull)
-        (field "userPublicKey" (varchar (Just 512)) notNull unique)
+  (User (field "user_uuid" uuid notNull unique)
+        (field "username" (varchar (Just 50)) notNull unique)
+        (field "hashed_password" (varchar (Just 256)) notNull)
+        (field "public_key" (varchar (Just 512)) notNull unique)
         lastUpdateField
   )

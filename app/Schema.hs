@@ -1,15 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 module Schema where
 
 import           Protolude
-import           Database.Beam                  ( withDatabase )
-import           Database.Beam.Migrate.Simple   ( autoMigrate )
-import           Database.Beam.Migrate.Generics ( defaultMigratableDbSettings )
+import           Database.Beam                  ( DatabaseSettings
+                                                , withDatabase
+                                                )
 import           Database.Beam.Migrate.Types    ( CheckedDatabaseSettings
                                                 , MigrationSteps
                                                 , migrationStep
+                                                , evaluateDatabase
+                                                , unCheckDatabase
                                                 )
+import           Database.Beam.Migrate.Simple   ( bringUpToDate )
 import           Database.Beam.Postgres         ( Postgres
                                                 , PgCommandSyntax
                                                 , Connection
@@ -19,17 +21,16 @@ import           Schema.V0001            hiding ( migration )
 import qualified Schema.V0001                  as V0001
                                                 ( migration )
 
-dukkhalessDb :: CheckedDatabaseSettings Postgres DukkhalessDb
-dukkhalessDb = settings
-  where settings = defaultMigratableDbSettings @PgCommandSyntax
+dukkhalessDb :: DatabaseSettings Postgres DukkhalessDb
+dukkhalessDb = unCheckDatabase (evaluateDatabase migrations)
 
-migration
+migrations
   :: MigrationSteps
        PgCommandSyntax
        ()
        (CheckedDatabaseSettings Postgres DukkhalessDb)
-migration = migrationStep "Initial commit" V0001.migration
+migrations = migrationStep "Initial commit" V0001.migration
 
 runMigrations :: Connection -> IO ()
 runMigrations conn =
-  withDatabase conn $ autoMigrate migrationBackend dukkhalessDb
+  void $ withDatabase conn $ bringUpToDate migrationBackend migrations
