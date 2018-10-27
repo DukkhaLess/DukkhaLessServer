@@ -36,6 +36,7 @@ library
                      , lens
                      , protolude
                      , bytestring
+                     , uuid-types
   hs-source-dirs:      app
   ghc-options:         -Wall -Werror
   default-language:    Haskell2010

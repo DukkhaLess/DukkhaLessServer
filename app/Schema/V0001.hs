@@ -8,6 +8,7 @@ import           Protolude                      ( Show
                                                 , (<$>)
                                                 , Maybe(..)
                                                 )
+import           Data.UUID.Types                ( UUID )
 import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Syntax  ( PgColumnSchemaSyntax )
@@ -20,7 +21,7 @@ import           Data.Text                      ( Text )
 
 data UserT f
   = User
-    { _userUuid :: Columnar f Text
+    { _userUuid :: Columnar f UUID
     , _userUsername :: Columnar f Text
     , _userHashedPassword :: Columnar f Text
     , _userPublicKey :: Columnar f Text
@@ -30,7 +31,7 @@ data UserT f
 instance Beamable UserT
 
 instance Table UserT where
-  data PrimaryKey UserT f = UserId (Columnar f Text) deriving Generic
+  data PrimaryKey UserT f = UserId (Columnar f UUID) deriving Generic
   primaryKey = UserId . _userUuid
 
 type User = UserT Identity
@@ -58,7 +59,7 @@ migration
        (CheckedDatabaseSettings Postgres DukkhalessDb)
 migration () = DukkhalessDb <$> createTable
   "user"
-  (User (field "userUuid" (varchar (Just 50)) notNull unique)
+  (User (field "userUuid" uuid notNull unique)
         (field "usrUsername" (varchar (Just 50)) notNull unique)
         (field "userHashedPassword" (varchar (Just 256)) notNull)
         (field "userPublicKey" (varchar (Just 512)) notNull unique)
