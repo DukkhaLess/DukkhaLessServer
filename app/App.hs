@@ -13,7 +13,9 @@ import           Protolude                      ( IO
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Data.Default                   ( def )
-import           Data.Text.Lazy                 ( unpack )
+import           Data.Text.Lazy                 ( unpack
+                                                , fromStrict
+                                                )
 import qualified Database.Beam.Postgres        as Pg
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
@@ -62,10 +64,10 @@ app' conf logger =
           get "/:word" $ html "Hi"
           post "/login" $ do
             loginUser <- jsonData :: ActionM LoginUser
-            text $ loginUser ^. (username . _text)
+            text $ fromStrict $ loginUser ^. (username . _text)
           post "/register" $ do
             registerUser <- jsonData :: ActionM RegisterUser
-            text $ registerUser ^. (username . _text)
+            text $ fromStrict $ registerUser ^. (username . _text)
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)

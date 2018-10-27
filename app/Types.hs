@@ -12,7 +12,8 @@ import           Protolude                      ( Eq
                                                 )
 import           Control.Lens.Combinators
 import           Data.Aeson
-import           Data.Text.Lazy                 ( Text )
+import           Data.Text ( Text )
+import           Data.Text.Short (ShortText, fromText, toText)
 
 newtype Username = Username Text
   deriving (Eq, Show, Generic)
@@ -51,12 +52,15 @@ instance FromJSON LoginUser where
   parseJSON = withObject "loginUser" $ \o ->
     LoginUser <$> o .: "username" <*> o .: "password"
 
+newtype HashedPassword = HashedPassword ShortText
+
 class HasText a where _text :: Lens' a Text
 instance HasText Text where _text = identity
 instance HasText RawPassword where _text = lens (\(RawPassword t) -> t) (\_ t -> RawPassword t)
 instance HasText Username where _text = lens (\(Username t) -> t) (\_ t -> Username t)
 instance HasText Base64Content where _text = lens (\(Base64Content t) -> t) (\_ t -> Base64Content t)
 instance HasText PublicKey where _text = base64Content . _text
+instance HasText HashedPassword where _text = lens (\(HashedPassword st) -> toText st) (\_ t -> HashedPassword (fromText t))
 
 class HasBase64Content a where base64Content :: Lens' a Base64Content
 instance HasBase64Content Base64Content where base64Content = identity

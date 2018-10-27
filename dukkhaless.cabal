@@ -16,6 +16,7 @@ library
   other-modules:       Types
                      , Schema
                      , Schema.V0001
+                     , Crypto
   build-depends:       base >=4.6 && < 5
                      , wai >= 3.0.0 && <3.3
                      , wai-extra >=3.0.0 && < 3.3
@@ -37,6 +38,8 @@ library
                      , protolude
                      , bytestring
                      , uuid-types
+                     , text-short
+                     , argon2 >= 1.3.0.1 && < 1.4
                      , postgresql-simple >= 0.5 && < 0.6
   hs-source-dirs:      app
   ghc-options:         -Wall -Werror
