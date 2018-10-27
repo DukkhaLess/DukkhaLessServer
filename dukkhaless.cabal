@@ -37,6 +37,7 @@ library
                      , protolude
                      , bytestring
                      , uuid-types
+                     , postgresql-simple >= 0.5 && < 0.6
   hs-source-dirs:      app
   ghc-options:         -Wall -Werror
   default-language:    Haskell2010

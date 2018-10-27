@@ -30,6 +30,7 @@ import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
 import qualified Data.Configurator             as C
+import           Schema                         ( runMigrations )
 
 app :: Conf.Environment -> IO ()
 app env = do
@@ -52,17 +53,19 @@ app' conf logger =
       $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
       )
       Pg.close
-    $ \_ -> scotty 4000 $ do
-        middleware $ rewritePureWithQueries removeApiPrefix
-        middleware logger
-        middleware $ gzip def
-        get "/:word" $ html "Hi"
-        post "/login" $ do
-          loginUser <- jsonData :: ActionM LoginUser
-          text $ loginUser ^. (username . _text)
-        post "/register" $ do
-          registerUser <- jsonData :: ActionM RegisterUser
-          text $ registerUser ^. (username . _text)
+    $ \conn -> do
+        runMigrations conn
+        scotty 4000 $ do
+          middleware $ rewritePureWithQueries removeApiPrefix
+          middleware logger
+          middleware $ gzip def
+          get "/:word" $ html "Hi"
+          post "/login" $ do
+            loginUser <- jsonData :: ActionM LoginUser
+            text $ loginUser ^. (username . _text)
+          post "/register" $ do
+            registerUser <- jsonData :: ActionM RegisterUser
+            text $ registerUser ^. (username . _text)
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
