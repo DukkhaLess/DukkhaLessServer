@@ -52,8 +52,7 @@ data DatabaseUser
 
 data DatabaseConfig
   = DatabaseConfig
-    { rootAccount :: DatabaseUser
-    , applicationAccount :: DatabaseUser
+    { applicationAccount :: DatabaseUser
     , postgresPort :: Word16
     , postgresHost :: String
     }
@@ -84,11 +83,6 @@ connectInfo conf usrFn =
 makeConfig :: C.Config -> IO (Maybe Config)
 makeConfig conf = runMaybeT $ do
   dbConf <- do
-    root <- do
-      name     <- MaybeT $ C.lookup conf "postgres.root.username"
-      pass     <- MaybeT $ C.lookup conf "postgres.root.password"
-      database <- MaybeT $ C.lookup conf "postgres.root.database"
-      return $ Conf.DatabaseUser name pass database
     app <- do
       name     <- MaybeT $ C.lookup conf "postgres.app.username"
       pass     <- MaybeT $ C.lookup conf "postgres.app.password"
@@ -96,7 +90,7 @@ makeConfig conf = runMaybeT $ do
       return $ Conf.DatabaseUser name pass database
     hostname <- MaybeT $ C.lookup conf "postgres.host"
     port     <- MaybeT $ C.lookup conf "postgres.port"
-    return $ Conf.DatabaseConfig root app port hostname
+    return $ Conf.DatabaseConfig app port hostname
   httpConfig <- do
     dmn <- MaybeT $ C.lookup conf "http.domain"
     return $ HttpConfig dmn

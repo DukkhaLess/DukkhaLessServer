@@ -18,3 +18,11 @@ The backend server for the DukkhaLess service.
   - `sudo docker run --name DukkhalessDB -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD -p 5432:5432 --restart unless-stopped -d postgres`
 - It should now be possible to run the test suite.
   - `stack test`
+- Set up an application user for the server.
+  ```sql
+  psql -h localhost -p 5432 -U postgres -W
+  CREATE DATABASE dukkhaless;
+  CREATE USER dukkhaless WITH ENCRYPTED PASSWORD secret;
+  GRANT ALL PRIVILEGES ON DATABASE dukkhaless TO dukkhaless;
+  ALTER DATABASE dukkhaless OWNER TO dukkhaless;
+  ```

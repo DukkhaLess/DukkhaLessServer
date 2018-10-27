@@ -56,12 +56,11 @@ migration
   -> Migration
        PgCommandSyntax
        (CheckedDatabaseSettings Postgres DukkhalessDb)
-migration () = do
-  DukkhalessDb <$> createTable
-    "user"
-    (User (field "userUuid" (varchar (Just 50)) notNull unique)
-          (field "usrUsername" (varchar (Just 50)) notNull unique)
-          (field "userHashedPassword" (varchar (Just 256)) notNull)
-          (field "userPublicKey" (varchar (Just 512)) notNull unique)
-          lastUpdateField
-    )
+migration () = DukkhalessDb <$> createTable
+  "user"
+  (User (field "userUuid" (varchar (Just 50)) notNull unique)
+        (field "usrUsername" (varchar (Just 50)) notNull unique)
+        (field "userHashedPassword" (varchar (Just 256)) notNull)
+        (field "userPublicKey" (varchar (Just 512)) notNull unique)
+        lastUpdateField
+  )
