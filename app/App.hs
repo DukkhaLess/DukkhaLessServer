@@ -12,14 +12,22 @@ import           Protolude                      ( IO
                                                 , (^)
                                                 , Either
                                                 , (++)
+                                                , Applicative
+                                                , flip
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
+import           Control.Monad.Reader
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
                                                 )
 import qualified Database.Beam.Postgres        as Pg
+import           Control.Concurrent.STM         ( TVar
+                                                , atomically
+                                                , readTVarIO
+                                                , modifyTVar'
+                                                )
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdoutDev
@@ -56,6 +64,23 @@ app env = do
       )
     Nothing -> putStrLn $ "Config file not found for environment: " ++ show env
 
+newtype AppState =
+  AppState
+    { cryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
+    }
+
+newtype WebM a = WebM { runWebM :: ReaderT (TVar AppState) IO a }
+  deriving (Applicative, Functor, Monad, MonadIO, MonadReader (TVar AppState))
+
+webM :: MonadTrans t => WebM a -> t WebM a
+webM = lift
+
+-- Some helpers to make this feel more like a state monad.
+gets :: (AppState -> b) -> WebM b
+gets f = ask >>= liftIO . readTVarIO >>= return . f
+
+modify :: (AppState -> AppState) -> WebM ()
+modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
 app' :: Conf.Config -> Middleware -> IO ()
 app' conf logger =

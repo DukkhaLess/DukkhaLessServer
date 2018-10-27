@@ -44,6 +44,9 @@ library
                      , entropy
                      , DRBG
                      , crypto-api
+                     , transformers
+                     , mtl
+                     , stm
   hs-source-dirs:      app
   ghc-options:         -Wall -Werror
   default-language:    Haskell2010
@@ -57,6 +60,7 @@ library
                      , StandaloneDeriving
                      , TypeSynonymInstances
                      , MultiParamTypeClasses
+                     , GeneralizedNewtypeDeriving
   exposed-modules:     App
                      , Conf
 
