@@ -16,7 +16,7 @@ import           Control.Lens
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Maybe      ( MaybeT(..)
                                                 )
-import Control.Monad.Trans (lift)
+import           Control.Monad.Trans            (lift)
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
