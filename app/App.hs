@@ -65,7 +65,7 @@ app' conf logger =
       )
       Pg.close
     $ \conn -> do
-        initialEntropy <- getEntropy 128
+        initialEntropy <- getEntropy 256
         let _ =
               newGenAutoReseed initialEntropy (2 ^ 48) :: Either
                   GenError
