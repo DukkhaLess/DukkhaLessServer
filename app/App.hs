@@ -38,10 +38,7 @@ import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
                                                 )
 import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
-import           Web.Scotty
-import           Web.Scotty.Trans               ( ScottyT(..)
-                                                , scottyT
-                                                )
+import           Web.Scotty.Trans
 import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
@@ -104,20 +101,21 @@ generateInitialAppState = do
       )
   return $ AppState gen
 
+type ActionT' = ActionT LT.Text WebM
+
 app' :: Pg.Connection -> Middleware -> ScottyT LT.Text WebM ()
-app' conn logger = do
-    middleware $ rewritePureWithQueries removeApiPrefix
-    middleware logger
-    middleware $ gzip def
-    get "/:word" $ html "Hi"
-    post "/login" $ do
-      loginUser <- jsonData :: ActionM LoginUser
-      text $ fromStrict $ loginUser ^. (username . _text)
-    post "/register" $ do
-      registerUser <- jsonData :: ActionM RegisterUser
-      text $ fromStrict $ registerUser ^. (username . _text)
+app' _ logger = do
+  middleware $ rewritePureWithQueries removeApiPrefix
+  middleware logger
+  middleware $ gzip def
+  get "/:word" $ html "Hi"
+  post "/login" $ do
+    loginUser <- jsonData :: ActionT' LoginUser
+    text $ fromStrict $ loginUser ^. (username . _text)
+  post "/register" $ do
+    registerUser <- jsonData :: ActionT' RegisterUser
+    text $ fromStrict $ registerUser ^. (username . _text)
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
 removeApiPrefix paq                     _ = paq
-
