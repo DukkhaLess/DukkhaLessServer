@@ -39,6 +39,9 @@ import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
 import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Web.Scotty
+import           Web.Scotty.Trans               ( ScottyT(..)
+                                                , scottyT
+                                                )
 import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
@@ -49,6 +52,7 @@ import           Crypto.Random.DRBG             ( HashDRBG
                                                 , GenAutoReseed
                                                 , newGenAutoReseed
                                                 )
+import qualified Data.Text.Lazy                as LT
 import           Crypto.Random                  ( GenError )
 
 app :: Conf.Environment -> IO ()
@@ -60,12 +64,14 @@ app env = void $ runMaybeT $ do
     $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
     )
     Pg.close
-    (\conn -> app'
-      conn
-      (case env of
-        Production  -> logStdout
-        Development -> logStdoutDev
-      )
+    (\conn -> do
+      runMigrations conn
+      let logger =
+            (case env of
+              Production  -> logStdout
+              Development -> logStdoutDev
+            )
+      scottyT 4000 _ $ app' conn logger
     )
 
 newtype AppState =
@@ -98,10 +104,8 @@ generateInitialAppState = do
       )
   return $ AppState gen
 
-app' :: Pg.Connection -> Middleware -> IO ()
+app' :: Pg.Connection -> Middleware -> ScottyT LT.Text WebM ()
 app' conn logger = do
-  runMigrations conn
-  scotty 4000 $ do
     middleware $ rewritePureWithQueries removeApiPrefix
     middleware logger
     middleware $ gzip def
