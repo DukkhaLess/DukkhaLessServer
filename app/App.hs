@@ -14,9 +14,10 @@ import           Protolude                      ( IO
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
-import           Control.Monad.Trans.Maybe      ( MaybeT(..)
-                                                )
-import           Control.Monad.Trans            (lift)
+import           Control.Monad.Trans.Maybe      ( MaybeT(..) )
+
+import           Control.Monad.Trans.Except     ( ExceptT(..) )
+import           Control.Monad.Trans            ( lift )
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
@@ -52,19 +53,20 @@ import           Crypto.Random                  ( GenError )
 
 app :: Conf.Environment -> IO ()
 app env = void $ runMaybeT $ do
-  conf <- MaybeT (C.load [C.Required $ unpack $ Conf.confFileName env]
-        >>= Conf.makeConfig )
+  conf <- MaybeT
+    (C.load [C.Required $ unpack $ Conf.confFileName env] >>= Conf.makeConfig)
   lift $ E.bracket
     ( Pg.connect
     $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
     )
     Pg.close
     (\conn -> app'
-      conn 
+      conn
       (case env of
         Production  -> logStdout
         Development -> logStdoutDev
-      ))
+      )
+    )
 
 newtype AppState =
   AppState
@@ -84,13 +86,20 @@ gets f = ask >>= liftIO . readTVarIO >>= return . f
 modify :: (AppState -> AppState) -> WebM ()
 modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
+generateInitialAppState :: ExceptT GenError IO AppState
+generateInitialAppState = do
+  initialEntropy <- lift $ getEntropy 256
+  gen            <-
+    ExceptT
+    $ return
+    $ (newGenAutoReseed initialEntropy (2 ^ 48) :: Either
+          GenError
+          (GenAutoReseed HashDRBG HashDRBG)
+      )
+  return $ AppState gen
+
 app' :: Pg.Connection -> Middleware -> IO ()
 app' conn logger = do
-  initialEntropy <- getEntropy 256
-  let _ =
-        newGenAutoReseed initialEntropy (2 ^ 48) :: Either
-            GenError
-            (GenAutoReseed HashDRBG HashDRBG)
   runMigrations conn
   scotty 4000 $ do
     middleware $ rewritePureWithQueries removeApiPrefix
