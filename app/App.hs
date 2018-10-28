@@ -10,13 +10,16 @@ import           Protolude                      ( IO
                                                 , Either
                                                 , Applicative
                                                 , flip
+                                                , either
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Maybe      ( MaybeT(..) )
 
-import           Control.Monad.Trans.Except     ( ExceptT(..) )
+import           Control.Monad.Trans.Except     ( ExceptT(..)
+                                                , runExceptT
+                                                )
 import           Control.Monad.Trans            ( lift )
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
@@ -27,6 +30,7 @@ import           Control.Concurrent.STM         ( TVar
                                                 , atomically
                                                 , readTVarIO
                                                 , modifyTVar'
+                                                , newTVarIO
                                                 )
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
@@ -68,7 +72,11 @@ app env = void $ runMaybeT $ do
               Production  -> logStdout
               Development -> logStdoutDev
             )
-      scottyT 4000 _ $ app' conn logger
+      eitherErrAppState <- runExceptT generateInitialAppState
+      initialAppState   <- either E.throwIO return eitherErrAppState
+      sync              <- newTVarIO initialAppState
+      let runActionToIO m = runReaderT (runWebM m) sync
+      scottyT 4000 runActionToIO $ app' conn logger
     )
 
 newtype AppState =
