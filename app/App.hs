@@ -116,7 +116,6 @@ app' _ logger = do
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger
   middleware $ gzip def
-  get "/:word" $ html "Hi"
   post "/login" $ do
     loginUser <- jsonData :: ActionT' LoginUser
     text $ fromStrict $ loginUser ^. (username . _text)

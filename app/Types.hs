@@ -12,8 +12,11 @@ import           Protolude                      ( Eq
                                                 )
 import           Control.Lens.Combinators
 import           Data.Aeson
-import           Data.Text ( Text )
-import           Data.Text.Short (ShortText, fromText, toText)
+import           Data.Text                      ( Text )
+import           Data.Text.Short                ( ShortText
+                                                , fromText
+                                                , toText
+                                                )
 
 newtype Username = Username Text
   deriving (Eq, Show, Generic)

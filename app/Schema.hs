@@ -1,5 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Schema where
+module Schema
+  ( module V0001
+  , migrationStep
+  , dukkhalessDb
+  , runMigrations
+  )
+where
 
 import           Protolude
 import           Database.Beam                  ( DatabaseSettings
@@ -19,7 +25,6 @@ import           Database.Beam.Postgres         ( Postgres
 import           Database.Beam.Postgres.Migrate ( migrationBackend )
 import           Schema.V0001            hiding ( migration )
 import qualified Schema.V0001                  as V0001
-                                                ( migration )
 
 dukkhalessDb :: DatabaseSettings Postgres DukkhalessDb
 dukkhalessDb = unCheckDatabase (evaluateDatabase migrations)
