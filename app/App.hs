@@ -12,6 +12,9 @@ import           Protolude                      ( IO
                                                 , flip
                                                 , either
                                                 , (<&>)
+                                                , (&)
+                                                , pure
+                                                , liftIO
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -21,13 +24,13 @@ import           Control.Monad.Trans.Except     ( ExceptT(..)
                                                 , runExceptT
                                                 )
 import           Control.Monad.Trans            ( lift )
-import Crypto.Classes.Exceptions (genBytes)
+import           Crypto.Classes.Exceptions      ( genBytes )
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
                                                 )
 import qualified Database.Beam.Postgres        as Pg
-import Domain (newUser)
+import           Domain                         ( newUser )
 import           Control.Concurrent.STM         ( TVar
                                                 , atomically
                                                 , readTVarIO
@@ -122,10 +125,14 @@ app' _ logger = do
     loginUser <- jsonData :: ActionT' LoginUser
     text $ fromStrict $ loginUser ^. (username . _text)
   post "/register" $ do
-    registerUser <- jsonData :: ActionT' RegisterUser
+    registerUser    <- jsonData :: ActionT' RegisterUser
     (salt, nextGen) <- webM $ (gets cryptoRandomGen <&> genBytes 16)
-    _ <- newUser registerUser (PasswordSalt salt)
-    webM $ modify $ \st -> st {cryptoRandomGen = nextGen}
+    _               <-
+      newUser registerUser (PasswordSalt salt)
+      &   runExceptT
+      &   liftIO
+      >>= either E.throw pure
+    webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
     text $ fromStrict $ registerUser ^. (username . _text)
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
