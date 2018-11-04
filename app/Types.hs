@@ -11,6 +11,7 @@ import           Protolude                      ( Eq
                                                 , (.)
                                                 )
 import           Control.Lens.Combinators
+import           Data.ByteString                ( ByteString )
 import           Data.Aeson
 import           Data.Text                      ( Text )
 import           Data.Text.Short                ( ShortText
@@ -81,3 +82,5 @@ instance HasUsername RegisterUser where username = lens (\(RegisterUser u _ _) -
 
 class HasPublicKey a where publicKey :: Lens' a PublicKey
 instance HasPublicKey RegisterUser where publicKey = lens (\(RegisterUser _ _ k) -> k) (\(RegisterUser u p _) k -> RegisterUser u p k)
+
+newtype PasswordSalt = PasswordSalt ByteString

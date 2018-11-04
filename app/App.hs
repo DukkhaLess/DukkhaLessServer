@@ -11,21 +11,23 @@ import           Protolude                      ( IO
                                                 , Applicative
                                                 , flip
                                                 , either
+                                                , (<&>)
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Maybe      ( MaybeT(..) )
-
 import           Control.Monad.Trans.Except     ( ExceptT(..)
                                                 , runExceptT
                                                 )
 import           Control.Monad.Trans            ( lift )
+import Crypto.Classes.Exceptions (genBytes)
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
                                                 )
 import qualified Database.Beam.Postgres        as Pg
+import Domain (newUser)
 import           Control.Concurrent.STM         ( TVar
                                                 , atomically
                                                 , readTVarIO
@@ -121,6 +123,9 @@ app' _ logger = do
     text $ fromStrict $ loginUser ^. (username . _text)
   post "/register" $ do
     registerUser <- jsonData :: ActionT' RegisterUser
+    (salt, nextGen) <- webM $ (gets cryptoRandomGen <&> genBytes 16)
+    _ <- newUser registerUser (PasswordSalt salt)
+    webM $ modify $ \st -> st {cryptoRandomGen = nextGen}
     text $ fromStrict $ registerUser ^. (username . _text)
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
