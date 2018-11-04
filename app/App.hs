@@ -90,13 +90,16 @@ newtype AppState =
     { cryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
     }
 
+{- A MonadTrans-like Monad for our application.
+  Its kind is too refined however to allow this to have a MonadTrans instance
+-}
 newtype WebM a = WebM { runWebM :: ReaderT (TVar AppState) IO a }
   deriving (Applicative, Functor, Monad, MonadIO, MonadReader (TVar AppState))
 
+-- | Lift a WebM a into another monad.
 webM :: MonadTrans t => WebM a -> t WebM a
 webM = lift
 
--- Some helpers to make this feel more like a state monad.
 gets :: (AppState -> b) -> WebM b
 gets f = f <$> (ask >>= liftIO . readTVarIO)
 
