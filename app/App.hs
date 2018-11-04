@@ -53,7 +53,7 @@ import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
 import qualified Data.Configurator             as C
-import           Schema                         ( runMigrations )
+import qualified Schema                        as Schema
 import           System.Entropy                 ( getEntropy )
 import           Crypto.Random.DRBG             ( HashDRBG
                                                 , GenAutoReseed
@@ -72,7 +72,7 @@ app env = void $ runMaybeT $ do
     )
     Pg.close
     (\conn -> do
-      runMigrations conn
+      Schema.runMigrations conn
       let logger =
             (case env of
               Production  -> logStdout
@@ -119,7 +119,7 @@ generateInitialAppState = do
 type ActionT' = ActionT LT.Text WebM
 
 app' :: Pg.Connection -> Middleware -> ScottyT LT.Text WebM ()
-app' _ logger = do
+app' conn logger = do
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger
   middleware $ gzip def
@@ -129,11 +129,12 @@ app' _ logger = do
   post "/register" $ do
     registerUser    <- jsonData :: ActionT' RegisterUser
     (salt, nextGen) <- webM (gets cryptoRandomGen <&> genBytes 16)
-    _               <-
+    user            <-
       newUser registerUser (PasswordSalt salt)
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
+    liftIO $ Schema.insertUser user conn
     webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
     text $ fromStrict $ registerUser ^. (username . _text)
 
