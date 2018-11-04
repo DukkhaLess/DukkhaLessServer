@@ -15,6 +15,7 @@ import           Protolude                      ( IO
                                                 , (&)
                                                 , pure
                                                 , liftIO
+                                                , (<$>)
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -97,7 +98,7 @@ webM = lift
 
 -- Some helpers to make this feel more like a state monad.
 gets :: (AppState -> b) -> WebM b
-gets f = ask >>= liftIO . readTVarIO >>= return . f
+gets f = f <$> (ask >>= liftIO . readTVarIO)
 
 modify :: (AppState -> AppState) -> WebM ()
 modify f = ask >>= liftIO . atomically . flip modifyTVar' f
@@ -105,13 +106,11 @@ modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 generateInitialAppState :: ExceptT GenError IO AppState
 generateInitialAppState = do
   initialEntropy <- lift $ getEntropy 256
-  gen            <-
-    ExceptT
-    $ return
-    $ (newGenAutoReseed initialEntropy (2 ^ 48) :: Either
-          GenError
-          (GenAutoReseed HashDRBG HashDRBG)
-      )
+  gen            <- ExceptT $ return
+    (newGenAutoReseed initialEntropy (2 ^ 48) :: Either
+        GenError
+        (GenAutoReseed HashDRBG HashDRBG)
+    )
   return $ AppState gen
 
 type ActionT' = ActionT LT.Text WebM
@@ -126,7 +125,7 @@ app' _ logger = do
     text $ fromStrict $ loginUser ^. (username . _text)
   post "/register" $ do
     registerUser    <- jsonData :: ActionT' RegisterUser
-    (salt, nextGen) <- webM $ (gets cryptoRandomGen <&> genBytes 16)
+    (salt, nextGen) <- webM (gets cryptoRandomGen <&> genBytes 16)
     _               <-
       newUser registerUser (PasswordSalt salt)
       &   runExceptT

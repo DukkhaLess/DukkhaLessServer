@@ -57,7 +57,7 @@ data DatabaseConfig
     , postgresHost :: String
     }
 
-data HttpConfig
+newtype HttpConfig
   = HttpConfig
     { domain :: ByteString
     }
@@ -70,13 +70,11 @@ data Config
     }
 
 connectInfo :: DatabaseConfig -> (DatabaseConfig -> DatabaseUser) -> ConnectInfo
-connectInfo conf usrFn =
-  ConnectInfo
-    (postgresHost conf)
-    (postgresPort conf)
-    (username user)
-    (password user)
-    (schema user)
+connectInfo conf usrFn = ConnectInfo (postgresHost conf)
+                                     (postgresPort conf)
+                                     (username user)
+                                     (password user)
+                                     (schema user)
   where user = usrFn conf
 
 
