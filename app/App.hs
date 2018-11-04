@@ -26,10 +26,12 @@ import           Control.Monad.Trans.Except     ( ExceptT(..)
                                                 )
 import           Control.Monad.Trans            ( lift )
 import           Crypto.Classes.Exceptions      ( genBytes )
+import           Crypto                         ( signJwt )
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
                                                 )
+import qualified Data.ByteString.Lazy          as BL
 import qualified Database.Beam.Postgres        as Pg
 import           Domain                         ( newUser
                                                 , createAccessToken
@@ -40,6 +42,7 @@ import           Control.Concurrent.STM         ( TVar
                                                 , modifyTVar'
                                                 , newTVarIO
                                                 )
+import           Jose.Jwt                       ( unJwt )
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdoutDev
@@ -87,9 +90,10 @@ app env = void $ runMaybeT $ do
       scottyT 4000 runActionToIO $ app' conn logger
     )
 
-newtype AppState =
+data AppState =
   AppState
     { cryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
+    , signingKey :: SigningKey
     }
 
 {- A MonadTrans-like Monad for our application.
@@ -109,14 +113,14 @@ modify :: (AppState -> AppState) -> WebM ()
 modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
 generateInitialAppState :: Conf.Config -> ExceptT GenError IO AppState
-generateInitialAppState _ = do
+generateInitialAppState conf = do
   initialEntropy <- lift $ getEntropy 256
   gen            <- ExceptT $ return
     (newGenAutoReseed initialEntropy (2 ^ 48) :: Either
         GenError
         (GenAutoReseed HashDRBG HashDRBG)
     )
-  return $ AppState gen
+  return $ AppState gen (Conf.signingKey conf)
 
 type ActionT' = ActionT LT.Text WebM
 
@@ -139,7 +143,9 @@ app' conn logger = do
     liftIO $ Schema.insertUser user conn
     webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
     token <- liftIO $ createAccessToken user
-    json token
+    tokenSigningKey <- webM (gets signingKey)
+    signedJwt <- either E.throw pure $ unJwt <$> signJwt tokenSigningKey token
+    raw $ BL.fromStrict signedJwt
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
