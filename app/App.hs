@@ -80,7 +80,7 @@ app env = void $ runMaybeT $ do
               Production  -> logStdout
               Development -> logStdoutDev
             )
-      eitherErrAppState <- runExceptT generateInitialAppState
+      eitherErrAppState <- runExceptT (generateInitialAppState conf)
       initialAppState   <- either E.throwIO return eitherErrAppState
       sync              <- newTVarIO initialAppState
       let runActionToIO m = runReaderT (runWebM m) sync
@@ -108,8 +108,8 @@ gets f = f <$> (ask >>= liftIO . readTVarIO)
 modify :: (AppState -> AppState) -> WebM ()
 modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
-generateInitialAppState :: ExceptT GenError IO AppState
-generateInitialAppState = do
+generateInitialAppState :: Conf.Config -> ExceptT GenError IO AppState
+generateInitialAppState _ = do
   initialEntropy <- lift $ getEntropy 256
   gen            <- ExceptT $ return
     (newGenAutoReseed initialEntropy (2 ^ 48) :: Either
