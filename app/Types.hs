@@ -18,6 +18,8 @@ import           Data.Text.Short                ( ShortText
                                                 , fromText
                                                 , toText
                                                 )
+import           Data.UUID                      ( UUID )
+import           Data.Time.Clock                ( UTCTime )
 
 newtype Username = Username Text
   deriving (Eq, Show, Generic)
@@ -84,3 +86,24 @@ class HasPublicKey a where publicKey :: Lens' a PublicKey
 instance HasPublicKey RegisterUser where publicKey = lens (\(RegisterUser _ _ k) -> k) (\(RegisterUser u p _) k -> RegisterUser u p k)
 
 newtype PasswordSalt = PasswordSalt ByteString
+
+newtype TokenId = TokenId UUID
+
+newtype UserId = UserId UUID
+
+class HasUUID a where uuid :: Lens' a UUID
+instance HasUUID UUID where uuid = identity
+instance HasUUID TokenId where uuid = lens (\(TokenId i) -> i) (\_ i -> TokenId i)
+instance HasUUID UserId where uuid = lens (\(UserId i) -> i) (\_ i -> UserId i)
+
+newtype Expiry = Expiry UTCTime
+
+class HasExpiry a where expiry :: Lens' a Expiry
+instance HasExpiry Expiry where expiry = identity
+
+class HasUtcTime a where utcTime :: Lens' a UTCTime
+instance HasUtcTime Expiry where utcTime = lens (\(Expiry t) -> t) (\_ t -> Expiry t)
+
+data AccessToken =
+  AccessToken TokenId UserId Expiry
+

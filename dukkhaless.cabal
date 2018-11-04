@@ -50,6 +50,7 @@ library
                      , stm
                      , uuid
                      , random
+                     , jose-jwt
   hs-source-dirs:      app
   ghc-options:         -Wall -Werror
   default-language:    Haskell2010
