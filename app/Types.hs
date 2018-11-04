@@ -88,8 +88,18 @@ instance HasPublicKey RegisterUser where publicKey = lens (\(RegisterUser _ _ k)
 newtype PasswordSalt = PasswordSalt ByteString
 
 newtype TokenId = TokenId UUID
+    deriving (Eq, Show, Generic)
+
+class HasTokenId a where tokenId :: Lens' a TokenId
+instance HasTokenId TokenId where tokenId = identity
+instance HasTokenId AccessToken where tokenId = lens (\(AccessToken ti _ _) -> ti) (\(AccessToken _ ui t) ti -> AccessToken ti ui t)
 
 newtype UserId = UserId UUID
+    deriving (Eq, Show, Generic)
+
+class HasUserId a where userId :: Lens' a UserId
+instance HasUserId UserId where userId = identity
+instance HasUserId AccessToken where userId = lens (\(AccessToken _ ui _) -> ui) (\(AccessToken ti _ t) ui -> AccessToken ti ui t)
 
 class HasUUID a where uuid :: Lens' a UUID
 instance HasUUID UUID where uuid = identity
@@ -97,13 +107,15 @@ instance HasUUID TokenId where uuid = lens (\(TokenId i) -> i) (\_ i -> TokenId 
 instance HasUUID UserId where uuid = lens (\(UserId i) -> i) (\_ i -> UserId i)
 
 newtype Expiry = Expiry UTCTime
+    deriving (Eq, Show, Generic)
 
 class HasExpiry a where expiry :: Lens' a Expiry
 instance HasExpiry Expiry where expiry = identity
+instance HasExpiry AccessToken where expiry = lens (\(AccessToken _ _ t) -> t) (\(AccessToken ti ui _) t -> AccessToken ti ui t)
 
 class HasUtcTime a where utcTime :: Lens' a UTCTime
 instance HasUtcTime Expiry where utcTime = lens (\(Expiry t) -> t) (\_ t -> Expiry t)
 
 data AccessToken =
   AccessToken TokenId UserId Expiry
-
+    deriving (Eq, Show, Generic)
