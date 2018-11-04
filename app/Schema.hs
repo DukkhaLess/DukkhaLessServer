@@ -17,6 +17,10 @@ import           Database.Beam.Migrate.Types    ( CheckedDatabaseSettings
                                                 , evaluateDatabase
                                                 , unCheckDatabase
                                                 )
+import           Database.Beam.Query            ( insert
+                                                , runInsert
+                                                , insertValues
+                                                )
 import           Database.Beam.Migrate.Simple   ( bringUpToDate )
 import           Database.Beam.Postgres         ( Postgres
                                                 , PgCommandSyntax
@@ -25,6 +29,7 @@ import           Database.Beam.Postgres         ( Postgres
 import           Database.Beam.Postgres.Migrate ( migrationBackend )
 import           Schema.V0001            hiding ( migration )
 import qualified Schema.V0001                  as V0001
+import qualified Database.Beam.Postgres        as Pg
 
 dukkhalessDb :: DatabaseSettings Postgres DukkhalessDb
 dukkhalessDb = unCheckDatabase (evaluateDatabase migrations)
@@ -39,3 +44,7 @@ migrations = migrationStep "Initial commit" V0001.migration
 runMigrations :: Connection -> IO ()
 runMigrations conn =
   void $ withDatabase conn $ bringUpToDate migrationBackend migrations
+
+insertUser :: User -> Connection -> IO ()
+insertUser u conn = withDatabase conn $ do
+  runInsert $ insert (_dukkalessUsers dukkhalessDb) $ insertValues [u]
