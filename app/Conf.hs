@@ -23,6 +23,7 @@ import           Data.Text.Lazy                 ( toLower
                                                 , Text
                                                 )
 import           Data.ByteString                ( ByteString )
+import qualified Types                         as T
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdout
                                                 , logStdoutDev
@@ -65,7 +66,7 @@ newtype HttpConfig
 data Config
   = Config
     { databaseConfig :: DatabaseConfig
-    , signingKey :: Text
+    , signingKey :: T.SigningKey
     , httpSettings :: HttpConfig
     }
 
@@ -93,5 +94,5 @@ makeConfig conf = runMaybeT $ do
     dmn <- MaybeT $ C.lookup conf "http.domain"
     return $ HttpConfig dmn
   sk <- MaybeT $ C.lookup conf "crypto.signingKey"
-  return $ Conf.Config dbConf sk httpConfig
+  return $ Conf.Config dbConf (T.SigningKey sk) httpConfig
 

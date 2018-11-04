@@ -136,3 +136,5 @@ instance FromJSON AccessToken where
     <*> v .: "sub"
     <*> v .: "exp"
   parseJSON invalid = typeMismatch "AccessToken" invalid
+
+newtype SigningKey = SigningKey { unSigningKey :: ByteString }

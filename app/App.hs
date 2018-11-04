@@ -31,7 +31,9 @@ import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
                                                 )
 import qualified Database.Beam.Postgres        as Pg
-import           Domain                         ( newUser )
+import           Domain                         ( newUser
+                                                , createAccessToken
+                                                )
 import           Control.Concurrent.STM         ( TVar
                                                 , atomically
                                                 , readTVarIO
@@ -136,7 +138,8 @@ app' conn logger = do
       >>= either E.throw pure
     liftIO $ Schema.insertUser user conn
     webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
-    text $ fromStrict $ registerUser ^. (username . _text)
+    token <- liftIO $ createAccessToken user
+    json token
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
