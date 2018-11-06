@@ -18,13 +18,9 @@ import           Database.Beam.Migrate.Types    ( CheckedDatabaseSettings
                                                 , evaluateDatabase
                                                 , unCheckDatabase
                                                 )
-import           Database.Beam.Query            ( insert
-                                                , runInsert
-                                                , insertValues
-                                                )
+import           Database.Beam.Query
 import           Database.Beam.Migrate.Simple   ( bringUpToDate )
-import           Database.Beam.Postgres         ( Postgres
-                                                , PgCommandSyntax
+import           Database.Beam.Postgres         ( PgCommandSyntax
                                                 , Connection
                                                 , Pg
                                                 )
@@ -32,14 +28,11 @@ import           Database.Beam.Postgres.Migrate ( migrationBackend )
 import           Schema.V0001            hiding ( migration )
 import qualified Schema.V0001                  as V0001
 
-dukkhalessDb :: DatabaseSettings Postgres DukkhalessDb
+dukkhalessDb :: DatabaseSettings be DukkhalessDb
 dukkhalessDb = unCheckDatabase (evaluateDatabase migrations)
 
 migrations
-  :: MigrationSteps
-       PgCommandSyntax
-       ()
-       (CheckedDatabaseSettings Postgres DukkhalessDb)
+  :: MigrationSteps PgCommandSyntax () (CheckedDatabaseSettings be DukkhalessDb)
 migrations = migrationStep "Initial commit" V0001.migration
 
 runMigrations :: Connection -> IO ()
