@@ -28,7 +28,8 @@ import           Control.Monad.Trans.Except     ( ExceptT(..)
                                                 )
 import           Control.Monad.Trans            ( lift )
 import           Crypto.Classes.Exceptions      ( genBytes )
-import           Crypto                         ( signJwt )
+import           Crypto                         ( signJwt, verifyPassword )
+import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
@@ -134,8 +135,18 @@ app' conn logger = do
   middleware logger
   middleware $ gzip def
   post "/login" $ do
-    loginUser <- jsonData :: ActionT' LoginUser
-    text $ fromStrict $ loginUser ^. (username . _text)
+    loginUser   <- jsonData :: ActionT' LoginUser
+    desiredUser <- _
+    let correctPassword =
+          HashedPassword $ Schema._userHashedPassword desiredUser
+    let providedPassword = loginUser ^. rawPassword
+    let passwordVerificationResult =
+          verifyPassword correctPassword providedPassword
+    case passwordVerificationResult of
+      Argon2.Argon2Ok -> respondWithAuthToken desiredUser
+      _        -> status status400
+
+
   post "/register" $ do
     registerUser <- jsonData :: ActionT' RegisterUser
     salt         <- nextBytes 16

@@ -16,10 +16,6 @@ import           Data.ByteString                ( ByteString )
 import           Data.Aeson
 import           Data.Aeson.Types               ( typeMismatch )
 import           Data.Text                      ( Text )
-import           Data.Text.Short                ( ShortText
-                                                , fromText
-                                                , toText
-                                                )
 import           Data.UUID                      ( UUID )
 import           Data.Time.Clock                ( UTCTime )
 
@@ -60,7 +56,7 @@ instance FromJSON LoginUser where
   parseJSON = withObject "loginUser" $ \o ->
     LoginUser <$> o .: "username" <*> o .: "password"
 
-newtype HashedPassword = HashedPassword ShortText
+newtype HashedPassword = HashedPassword Text
 
 class HasText a where _text :: Lens' a Text
 instance HasText Text where _text = identity
@@ -68,7 +64,7 @@ instance HasText RawPassword where _text = lens (\(RawPassword t) -> t) (\_ t ->
 instance HasText Username where _text = lens (\(Username t) -> t) (\_ t -> Username t)
 instance HasText Base64Content where _text = lens (\(Base64Content t) -> t) (\_ t -> Base64Content t)
 instance HasText PublicKey where _text = base64Content . _text
-instance HasText HashedPassword where _text = lens (\(HashedPassword st) -> toText st) (\_ t -> HashedPassword (fromText t))
+instance HasText HashedPassword where _text = lens (\(HashedPassword st) -> st) (\_ t -> HashedPassword t)
 
 class HasBase64Content a where base64Content :: Lens' a Base64Content
 instance HasBase64Content Base64Content where base64Content = identity
