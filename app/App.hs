@@ -136,7 +136,7 @@ app' conn logger = do
   middleware $ gzip def
   post "/login" $ do
     loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- _
+    desiredUser <- liftIO $ _ (loginUser ^. username) conn
     let correctPassword =
           HashedPassword $ Schema._userHashedPassword desiredUser
     let providedPassword = loginUser ^. rawPassword
