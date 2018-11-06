@@ -17,6 +17,7 @@ import           Protolude                      ( IO
                                                 , liftIO
                                                 , (<$>)
                                                 , const
+                                                , Int
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -33,6 +34,7 @@ import           Data.Text.Lazy                 ( unpack
                                                 , fromStrict
                                                 )
 import qualified Data.ByteString.Lazy          as BL
+import           Data.ByteString                ( ByteString )
 import qualified Database.Beam.Postgres        as Pg
 import           Domain                         ( newUser
                                                 , createAccessToken
@@ -135,20 +137,25 @@ app' conn logger = do
     loginUser <- jsonData :: ActionT' LoginUser
     text $ fromStrict $ loginUser ^. (username . _text)
   post "/register" $ do
-    registerUser    <- jsonData :: ActionT' RegisterUser
-    (salt, nextGen) <- webM (gets cryptoRandomGen <&> genBytes 16)
-    user            <-
+    registerUser <- jsonData :: ActionT' RegisterUser
+    salt         <- nextBytes 16
+    user         <-
       newUser registerUser (PasswordSalt salt)
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
     liftIO $ Schema.insertUser user conn
-    webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
     token           <- liftIO $ createAccessToken user
     tokenSigningKey <- webM (gets signingKey)
     either (const (status status500)) (raw . BL.fromStrict)
       $   unJwt
       <$> signJwt tokenSigningKey token
+
+nextBytes :: Int -> ActionT' ByteString
+nextBytes byteCount = do
+  (salt, nextGen) <- webM (gets cryptoRandomGen <&> genBytes byteCount)
+  webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
+  pure salt
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
