@@ -145,11 +145,15 @@ app' conn logger = do
       &   liftIO
       >>= either E.throw pure
     liftIO $ Schema.insertUser user conn
-    token           <- liftIO $ createAccessToken user
-    tokenSigningKey <- webM (gets signingKey)
-    either (const (status status500)) (raw . BL.fromStrict)
-      $   unJwt
-      <$> signJwt tokenSigningKey token
+    respondWithAuthToken user
+
+respondWithAuthToken :: Schema.User -> ActionT' ()
+respondWithAuthToken user = do
+  token           <- liftIO $ createAccessToken user
+  tokenSigningKey <- webM (gets signingKey)
+  either (const (status status500)) (raw . BL.fromStrict)
+    $   unJwt
+    <$> signJwt tokenSigningKey token
 
 nextBytes :: Int -> ActionT' ByteString
 nextBytes byteCount = do
