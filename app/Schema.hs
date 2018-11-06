@@ -1,41 +1,53 @@
-module Schema where
+{-# LANGUAGE OverloadedStrings #-}
+module Schema
+  ( module V0001
+  , migrationStep
+  , dukkhalessDb
+  , runMigrations
+  , insertUser
+  )
+where
 
-import           Protolude                      ( Show
-                                                , Eq
-                                                , Identity
-                                                , (.)
+import           Protolude
+import           Database.Beam                  ( DatabaseSettings
+                                                , withDatabase
                                                 )
-import           Database.Beam
-import           Data.Text                      ( Text )
+import           Database.Beam.Migrate.Types    ( CheckedDatabaseSettings
+                                                , MigrationSteps
+                                                , migrationStep
+                                                , evaluateDatabase
+                                                , unCheckDatabase
+                                                )
+import           Database.Beam.Query            ( insert
+                                                , runInsert
+                                                , insertValues
+                                                )
+import           Database.Beam.Migrate.Simple   ( bringUpToDate )
+import           Database.Beam.Postgres         ( Postgres
+                                                , PgCommandSyntax
+                                                , Connection
+                                                , Pg
+                                                )
+import           Database.Beam.Postgres.Migrate ( migrationBackend )
+import           Schema.V0001            hiding ( migration )
+import qualified Schema.V0001                  as V0001
 
-data UserT f
-  = User
-    { _userUuid :: Columnar f Text
-    , _userUsername :: Columnar f Text
-    , _userHashedPassword :: Columnar f Text
-    , _userPublicKey :: Columnar f Text
-    }
-    deriving (Generic)
-instance Beamable UserT
+dukkhalessDb :: DatabaseSettings Postgres DukkhalessDb
+dukkhalessDb = unCheckDatabase (evaluateDatabase migrations)
 
-instance Table UserT where
-  data PrimaryKey UserT f = UserId (Columnar f Text) deriving Generic
-  primaryKey = UserId . _userUuid
+migrations
+  :: MigrationSteps
+       PgCommandSyntax
+       ()
+       (CheckedDatabaseSettings Postgres DukkhalessDb)
+migrations = migrationStep "Initial commit" V0001.migration
 
-type User = UserT Identity
-deriving instance Show User
-deriving instance Eq User
+runMigrations :: Connection -> IO ()
+runMigrations conn =
+  void $ withDatabase conn $ bringUpToDate migrationBackend migrations
 
-type UserId = PrimaryKey UserT Identity
-instance Beamable (PrimaryKey UserT)
-
-data DukkhalessDb f
-  = DukkhalessDb
-    { _dukkalessUsers :: f (TableEntity UserT)
-    }
-    deriving Generic
-
-instance Database be DukkhalessDb
-
-dukkhalessDb :: DatabaseSettings be DukkhalessDb
-dukkhalessDb = defaultDbSettings
+insertUser :: User -> Connection -> IO ()
+insertUser u conn = withDatabase conn cmd
+ where
+  cmd :: Pg ()
+  cmd = runInsert $ insert (_dukkalessUsers dukkhalessDb) $ insertValues [u]

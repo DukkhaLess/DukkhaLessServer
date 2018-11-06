@@ -13,6 +13,7 @@ import           Protolude                      ( show
                                                 , ($)
                                                 )
 import           Data.Word                      ( Word16 )
+import           Database.Beam.Postgres         ( ConnectInfo(..) )
 import           Control.Monad.Trans.Maybe      ( MaybeT(..)
                                                 , runMaybeT
                                                 )
@@ -22,6 +23,7 @@ import           Data.Text.Lazy                 ( toLower
                                                 , Text
                                                 )
 import           Data.ByteString                ( ByteString )
+import qualified Types                         as T
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdout
                                                 , logStdoutDev
@@ -51,13 +53,12 @@ data DatabaseUser
 
 data DatabaseConfig
   = DatabaseConfig
-    { rootAccount :: DatabaseUser
-    , applicationAccount :: DatabaseUser
+    { applicationAccount :: DatabaseUser
     , postgresPort :: Word16
     , postgresHost :: String
     }
 
-data HttpConfig
+newtype HttpConfig
   = HttpConfig
     { domain :: ByteString
     }
@@ -65,19 +66,22 @@ data HttpConfig
 data Config
   = Config
     { databaseConfig :: DatabaseConfig
-    , signingKey :: Text
+    , signingKey :: T.SigningKey
     , httpSettings :: HttpConfig
     }
+
+connectInfo :: DatabaseConfig -> (DatabaseConfig -> DatabaseUser) -> ConnectInfo
+connectInfo conf usrFn = ConnectInfo (postgresHost conf)
+                                     (postgresPort conf)
+                                     (username user)
+                                     (password user)
+                                     (schema user)
+  where user = usrFn conf
 
 
 makeConfig :: C.Config -> IO (Maybe Config)
 makeConfig conf = runMaybeT $ do
   dbConf <- do
-    root <- do
-      name     <- MaybeT $ C.lookup conf "postgres.root.username"
-      pass     <- MaybeT $ C.lookup conf "postgres.root.password"
-      database <- MaybeT $ C.lookup conf "postgres.root.database"
-      return $ Conf.DatabaseUser name pass database
     app <- do
       name     <- MaybeT $ C.lookup conf "postgres.app.username"
       pass     <- MaybeT $ C.lookup conf "postgres.app.password"
@@ -85,10 +89,10 @@ makeConfig conf = runMaybeT $ do
       return $ Conf.DatabaseUser name pass database
     hostname <- MaybeT $ C.lookup conf "postgres.host"
     port     <- MaybeT $ C.lookup conf "postgres.port"
-    return $ Conf.DatabaseConfig root app port hostname
+    return $ Conf.DatabaseConfig app port hostname
   httpConfig <- do
     dmn <- MaybeT $ C.lookup conf "http.domain"
     return $ HttpConfig dmn
   sk <- MaybeT $ C.lookup conf "crypto.signingKey"
-  return $ Conf.Config dbConf sk httpConfig
+  return $ Conf.Config dbConf (T.SigningKey sk) httpConfig
 
