@@ -18,6 +18,7 @@ import           Protolude                      ( IO
                                                 , (<$>)
                                                 , const
                                                 , Int
+                                                , Maybe(..)
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -28,12 +29,12 @@ import           Control.Monad.Trans.Except     ( ExceptT(..)
                                                 )
 import           Control.Monad.Trans            ( lift )
 import           Crypto.Classes.Exceptions      ( genBytes )
-import           Crypto                         ( signJwt, verifyPassword )
+import           Crypto                         ( signJwt
+                                                , verifyPassword
+                                                )
 import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
-import           Data.Text.Lazy                 ( unpack
-                                                , fromStrict
-                                                )
+import           Data.Text.Lazy                 ( unpack )
 import qualified Data.ByteString.Lazy          as BL
 import           Data.ByteString                ( ByteString )
 import qualified Database.Beam.Postgres        as Pg
@@ -136,16 +137,18 @@ app' conn logger = do
   middleware $ gzip def
   post "/login" $ do
     loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- liftIO $ _ (loginUser ^. username) conn
-    let correctPassword =
-          HashedPassword $ Schema._userHashedPassword desiredUser
-    let providedPassword = loginUser ^. rawPassword
-    let passwordVerificationResult =
-          verifyPassword correctPassword providedPassword
-    case passwordVerificationResult of
-      Argon2.Argon2Ok -> respondWithAuthToken desiredUser
-      _        -> status status400
-
+    desiredUser <- liftIO
+      $ Schema.findUserbyUsername (loginUser ^. username) conn
+    case desiredUser of
+      Just user -> do
+        let correctPassword  = HashedPassword $ Schema._userHashedPassword user
+        let providedPassword = loginUser ^. rawPassword
+        let passwordVerificationResult =
+              verifyPassword correctPassword providedPassword
+        case passwordVerificationResult of
+          Argon2.Argon2Ok -> respondWithAuthToken user
+          _               -> status status400
+      Nothing -> status status400
 
   post "/register" $ do
     registerUser <- jsonData :: ActionT' RegisterUser
