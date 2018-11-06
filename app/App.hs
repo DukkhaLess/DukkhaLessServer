@@ -16,6 +16,7 @@ import           Protolude                      ( IO
                                                 , pure
                                                 , liftIO
                                                 , (<$>)
+                                                , const
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -53,6 +54,7 @@ import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
                                                 )
 import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
+import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
 import           Types
 import qualified Conf                          as Conf
@@ -142,10 +144,11 @@ app' conn logger = do
       >>= either E.throw pure
     liftIO $ Schema.insertUser user conn
     webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
-    token <- liftIO $ createAccessToken user
+    token           <- liftIO $ createAccessToken user
     tokenSigningKey <- webM (gets signingKey)
-    signedJwt <- either E.throw pure $ unJwt <$> signJwt tokenSigningKey token
-    raw $ BL.fromStrict signedJwt
+    either (const (status status500)) (raw . BL.fromStrict)
+      $   unJwt
+      <$> signJwt tokenSigningKey token
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
