@@ -15,6 +15,7 @@ cabal-version:       >= 1.10
 library
   other-modules:       Types
                      , Schema
+                     , Schema.Helpers
                      , Schema.V0001
                      , Crypto
                      , Domain

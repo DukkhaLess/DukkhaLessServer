@@ -11,13 +11,12 @@ import           Protolude                      ( Show
 import           Data.UUID.Types                ( UUID )
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.Beam.Postgres.Syntax  ( PgColumnSchemaSyntax )
 import           Data.Time.LocalTime            ( LocalTime )
 import           Database.Beam.Migrate.Types
                                          hiding ( migrateScript )
 import           Database.Beam.Migrate.SQL.Tables
-import           Database.Beam.Migrate.SQL      ( TableFieldSchema )
 import           Data.Text                      ( Text )
+import Schema.Helpers
 
 data UserT f
   = User
@@ -41,20 +40,15 @@ deriving instance Eq User
 type UserId = PrimaryKey UserT Identity
 instance Beamable (PrimaryKey UserT)
 
-data DukkhalessDb f
-  = DukkhalessDb
-    { _dukkalessUsers :: f (TableEntity UserT)
-    }
-    deriving Generic
-
-instance Database be DukkhalessDb
-
-lastUpdateField :: TableFieldSchema PgColumnSchemaSyntax LocalTime
-lastUpdateField = field "last_update" timestamp (defaultTo_ now_) notNull
+type DukkhalessCons be db = CheckedDatabaseEntity
+                                      be db (TableEntity UserT)
+                                    -> CheckedDatabaseSettings be db
 
 migration
-  :: () -> Migration PgCommandSyntax (CheckedDatabaseSettings be DukkhalessDb)
-migration () = DukkhalessDb <$> createTable
+  :: DukkhalessCons be db
+  -> ()
+  -> Migration PgCommandSyntax (CheckedDatabaseSettings be db)
+migration db _ = db <$> createTable
   "users"
   (User (field "user_uuid" uuid notNull unique)
         (field "username" (varchar (Just 50)) notNull unique)

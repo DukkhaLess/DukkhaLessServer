@@ -10,32 +10,37 @@ module Schema
 where
 
 import           Protolude
-import           Database.Beam                  ( DatabaseSettings
-                                                , withDatabase
-                                                )
+import           Database.Beam
 import           Database.Beam.Migrate.Types    ( CheckedDatabaseSettings
                                                 , MigrationSteps
                                                 , migrationStep
                                                 , evaluateDatabase
                                                 , unCheckDatabase
                                                 )
-import           Database.Beam.Query
 import           Database.Beam.Migrate.Simple   ( bringUpToDate )
 import           Database.Beam.Postgres         ( PgCommandSyntax
                                                 , Connection
                                                 , Pg
                                                 )
 import           Database.Beam.Postgres.Migrate ( migrationBackend )
-import           Schema.V0001            hiding ( migration )
+import           Schema.V0001            hiding ( migration, DukkhalessCons )
 import qualified Schema.V0001                  as V0001
 import qualified Types                         as T
+
+data DukkhalessDb f
+  = DukkhalessDb
+    { _dukkalessUsers :: f (TableEntity UserT)
+    }
+    deriving Generic
+
+instance Database be DukkhalessDb
 
 dukkhalessDb :: DatabaseSettings be DukkhalessDb
 dukkhalessDb = unCheckDatabase (evaluateDatabase migrations)
 
 migrations
   :: MigrationSteps PgCommandSyntax () (CheckedDatabaseSettings be DukkhalessDb)
-migrations = migrationStep "Initial commit" V0001.migration
+migrations = migrationStep "Initial commit" (V0001.migration DukkhalessDb)
 
 runMigrations :: Connection -> IO ()
 runMigrations conn =
