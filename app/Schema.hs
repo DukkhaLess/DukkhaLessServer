@@ -5,6 +5,7 @@ module Schema
   , dukkhalessDb
   , runMigrations
   , insertUser
+  , findUserbyUsername
   )
 where
 
@@ -18,28 +19,22 @@ import           Database.Beam.Migrate.Types    ( CheckedDatabaseSettings
                                                 , evaluateDatabase
                                                 , unCheckDatabase
                                                 )
-import           Database.Beam.Query            ( insert
-                                                , runInsert
-                                                , insertValues
-                                                )
+import           Database.Beam.Query
 import           Database.Beam.Migrate.Simple   ( bringUpToDate )
-import           Database.Beam.Postgres         ( Postgres
-                                                , PgCommandSyntax
+import           Database.Beam.Postgres         ( PgCommandSyntax
                                                 , Connection
                                                 , Pg
                                                 )
 import           Database.Beam.Postgres.Migrate ( migrationBackend )
 import           Schema.V0001            hiding ( migration )
 import qualified Schema.V0001                  as V0001
+import qualified Types                         as T
 
-dukkhalessDb :: DatabaseSettings Postgres DukkhalessDb
+dukkhalessDb :: DatabaseSettings be DukkhalessDb
 dukkhalessDb = unCheckDatabase (evaluateDatabase migrations)
 
 migrations
-  :: MigrationSteps
-       PgCommandSyntax
-       ()
-       (CheckedDatabaseSettings Postgres DukkhalessDb)
+  :: MigrationSteps PgCommandSyntax () (CheckedDatabaseSettings be DukkhalessDb)
 migrations = migrationStep "Initial commit" V0001.migration
 
 runMigrations :: Connection -> IO ()
@@ -51,3 +46,11 @@ insertUser u conn = withDatabase conn cmd
  where
   cmd :: Pg ()
   cmd = runInsert $ insert (_dukkalessUsers dukkhalessDb) $ insertValues [u]
+
+findUserbyUsername :: T.Username -> Connection -> IO (Maybe User)
+findUserbyUsername (T.Username name) conn = withDatabase conn cmd
+ where
+  cmd :: Pg (Maybe User)
+  cmd = runSelectReturningOne $ select $ filter_
+    (\u -> _userUsername u ==. val_ name)
+    (all_ (_dukkalessUsers dukkhalessDb))

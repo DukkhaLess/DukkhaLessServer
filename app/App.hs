@@ -17,6 +17,8 @@ import           Protolude                      ( IO
                                                 , liftIO
                                                 , (<$>)
                                                 , const
+                                                , Int
+                                                , Maybe(..)
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -27,12 +29,14 @@ import           Control.Monad.Trans.Except     ( ExceptT(..)
                                                 )
 import           Control.Monad.Trans            ( lift )
 import           Crypto.Classes.Exceptions      ( genBytes )
-import           Crypto                         ( signJwt )
-import           Data.Default                   ( def )
-import           Data.Text.Lazy                 ( unpack
-                                                , fromStrict
+import           Crypto                         ( signJwt
+                                                , verifyPassword
                                                 )
+import qualified Crypto.Argon2                 as Argon2
+import           Data.Default                   ( def )
+import           Data.Text.Lazy                 ( unpack )
 import qualified Data.ByteString.Lazy          as BL
+import           Data.ByteString                ( ByteString )
 import qualified Database.Beam.Postgres        as Pg
 import           Domain                         ( newUser
                                                 , createAccessToken
@@ -132,23 +136,44 @@ app' conn logger = do
   middleware logger
   middleware $ gzip def
   post "/login" $ do
-    loginUser <- jsonData :: ActionT' LoginUser
-    text $ fromStrict $ loginUser ^. (username . _text)
+    loginUser   <- jsonData :: ActionT' LoginUser
+    desiredUser <- liftIO
+      $ Schema.findUserbyUsername (loginUser ^. username) conn
+    case desiredUser of
+      Just user -> do
+        let correctPassword  = HashedPassword $ Schema._userHashedPassword user
+        let providedPassword = loginUser ^. rawPassword
+        let passwordVerificationResult =
+              verifyPassword correctPassword providedPassword
+        case passwordVerificationResult of
+          Argon2.Argon2Ok -> respondWithAuthToken user
+          _               -> status status400
+      Nothing -> status status400
+
   post "/register" $ do
-    registerUser    <- jsonData :: ActionT' RegisterUser
-    (salt, nextGen) <- webM (gets cryptoRandomGen <&> genBytes 16)
-    user            <-
+    registerUser <- jsonData :: ActionT' RegisterUser
+    salt         <- nextBytes 16
+    user         <-
       newUser registerUser (PasswordSalt salt)
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
     liftIO $ Schema.insertUser user conn
-    webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
-    token           <- liftIO $ createAccessToken user
-    tokenSigningKey <- webM (gets signingKey)
-    either (const (status status500)) (raw . BL.fromStrict)
-      $   unJwt
-      <$> signJwt tokenSigningKey token
+    respondWithAuthToken user
+
+respondWithAuthToken :: Schema.User -> ActionT' ()
+respondWithAuthToken user = do
+  token           <- liftIO $ createAccessToken user
+  tokenSigningKey <- webM (gets signingKey)
+  either (const (status status500)) (raw . BL.fromStrict)
+    $   unJwt
+    <$> signJwt tokenSigningKey token
+
+nextBytes :: Int -> ActionT' ByteString
+nextBytes byteCount = do
+  (salt, nextGen) <- webM (gets cryptoRandomGen <&> genBytes byteCount)
+  webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
+  pure salt
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)

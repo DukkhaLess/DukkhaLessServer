@@ -53,10 +53,7 @@ lastUpdateField :: TableFieldSchema PgColumnSchemaSyntax LocalTime
 lastUpdateField = field "last_update" timestamp (defaultTo_ now_) notNull
 
 migration
-  :: ()
-  -> Migration
-       PgCommandSyntax
-       (CheckedDatabaseSettings Postgres DukkhalessDb)
+  :: () -> Migration PgCommandSyntax (CheckedDatabaseSettings be DukkhalessDb)
 migration () = DukkhalessDb <$> createTable
   "users"
   (User (field "user_uuid" uuid notNull unique)
