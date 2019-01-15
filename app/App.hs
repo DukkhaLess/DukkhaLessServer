@@ -35,7 +35,6 @@ import           Crypto                         ( signJwt
 import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack )
-import qualified Data.ByteString.Lazy          as BL
 import           Data.ByteString                ( ByteString )
 import qualified Database.Beam.Postgres        as Pg
 import           Domain                         ( newUser
@@ -47,7 +46,6 @@ import           Control.Concurrent.STM         ( TVar
                                                 , modifyTVar'
                                                 , newTVarIO
                                                 )
-import           Jose.Jwt                       ( unJwt )
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdoutDev
@@ -165,9 +163,7 @@ respondWithAuthToken :: Schema.User -> ActionT' ()
 respondWithAuthToken user = do
   token           <- liftIO $ createAccessToken user
   tokenSigningKey <- webM (gets signingKey)
-  either (const (status status500)) (raw . BL.fromStrict)
-    $   unJwt
-    <$> signJwt tokenSigningKey token
+  either (const (status status500)) json (signJwt tokenSigningKey token)
 
 nextBytes :: Int -> ActionT' ByteString
 nextBytes byteCount = do

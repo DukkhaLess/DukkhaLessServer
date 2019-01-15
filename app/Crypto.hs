@@ -1,9 +1,10 @@
 module Crypto where
 
-import           Prelude                        ( ($)
-                                                , Either
-                                                , fmap
+import           Protolude                      ( ($)
                                                 , (<$>)
+                                                , Either(..)
+                                                , fmap
+                                                , (.)
                                                 )
 import           Data.ByteString                ( ByteString )
 import           Data.ByteString.Lazy           ( toStrict )
@@ -15,10 +16,12 @@ import           Data.Text.Short                ( fromText
                                                 )
 import           Jose.Jwa                       ( JwsAlg(HS512) )
 import           Jose.Jwt                       ( JwtError
-                                                , Jwt
+                                                , unJwt
                                                 )
 import           Jose.Jws                       ( hmacEncode )
-import           Data.Text.Encoding             ( encodeUtf8 )
+import           Data.Text.Encoding             ( encodeUtf8
+                                                , decodeUtf8
+                                                )
 import           Crypto.Argon2                  ( verifyEncoded
                                                 , hashEncoded
                                                 , defaultHashOptions
@@ -27,6 +30,8 @@ import           Crypto.Argon2                  ( verifyEncoded
 import           Types                          ( RawPassword(..)
                                                 , HashedPassword(..)
                                                 , SigningKey(..)
+                                                , SessionToken(..)
+                                                , Base64Content(..)
                                                 )
 
 hashPassword :: ByteString -> RawPassword -> Either Argon2Status HashedPassword
@@ -39,5 +44,7 @@ verifyPassword :: HashedPassword -> RawPassword -> Argon2Status
 verifyPassword (HashedPassword pass) (RawPassword raw) =
   verifyEncoded (fromText pass) (encodeUtf8 raw)
 
-signJwt :: ToJSON a => SigningKey -> a -> Either JwtError Jwt
-signJwt (SigningKey k) a = hmacEncode HS512 k (toStrict $ encode a)
+signJwt :: ToJSON a => SigningKey -> a -> Either JwtError SessionToken
+signJwt (SigningKey k) a =
+  (SessionToken . Base64Content . decodeUtf8 . unJwt)
+    <$> hmacEncode HS512 k (toStrict $ encode a)

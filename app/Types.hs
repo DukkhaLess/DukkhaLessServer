@@ -45,11 +45,6 @@ instance FromJSON RegisterUser where
   parseJSON = withObject "loginUser" $ \o ->
     RegisterUser <$> o .: "username" <*> o .: "password" <*> o .: "publicKey"
 
-newtype SessionToken = SessionToken Base64Content
-  deriving (Eq, Show, Generic)
-instance ToJSON SessionToken
-instance FromJSON SessionToken
-
 data LoginUser = LoginUser Username RawPassword
   deriving (Eq, Show, Generic)
 instance FromJSON LoginUser where
@@ -134,3 +129,14 @@ instance FromJSON AccessToken where
   parseJSON invalid = typeMismatch "AccessToken" invalid
 
 newtype SigningKey = SigningKey { unSigningKey :: ByteString }
+
+newtype SessionToken = SessionToken Base64Content
+  deriving (Eq, Show, Generic)
+instance ToJSON SessionToken where
+  toJSON (SessionToken content) = object [ "sessionToken" .= content]
+  toEncoding (SessionToken content) = pairs ("sessionToken" .= content)
+
+instance FromJSON SessionToken where
+  parseJSON (Object v) = SessionToken
+    <$> v .: "sessionToken"
+  parseJSON invalid = typeMismatch "SessionToken" invalid
