@@ -36,7 +36,6 @@ import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack )
 import           Data.ByteString                ( ByteString )
-import qualified Database.Beam.Postgres        as Pg
 import           Domain                         ( newUser
                                                 , createAccessToken
                                                 )

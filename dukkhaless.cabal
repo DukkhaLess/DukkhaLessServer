@@ -15,7 +15,6 @@ cabal-version:       >= 1.10
 library
   other-modules:       Types
                      , Schema
-                     , Schema.Helpers
                      , Schema.V0001
                      , Crypto
                      , Domain
@@ -31,9 +30,6 @@ library
                      , text
                      , time
                      , aeson
-                     , beam-core
-                     , beam-postgres
-                     , beam-migrate
                      , transformers
                      , http-types
                      , lens

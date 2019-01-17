@@ -1,12 +1,10 @@
 module Domain where
 
 import           Protolude
-import           Schema                         ( UserT(User)
-                                                , User
-                                                )
 import           Control.Lens
 import           Types
 import           Crypto                         ( hashPassword )
+import           Schema
 import           Data.UUID                      ( UUID )
 import           Data.Time.LocalTime            ( utcToLocalTime
                                                 , utc
@@ -23,10 +21,10 @@ newUser (RegisterUser name rawPass pubKey) (PasswordSalt salt) = do
   uuid       <- lift (randomIO :: IO UUID)
   hashedPass <- ExceptT $ pure $ hashPassword salt rawPass
   now        <- lift $ utcToLocalTime utc <$> getCurrentTime
-  pure $ User uuid (name ^. _text) (hashedPass ^. _text) (pubKey ^. _text) now
+  pure $ User uuid (name ^. _text) (hashedPass ^. _text) (pubKey ^. _text) now now
 
 createAccessToken :: User -> IO AccessToken
-createAccessToken (User uuid _ _ _ _) = do
+createAccessToken (User uuid _ _ _ _ _) = do
   inTwoDays <- getCurrentTime
     <&> \(UTCTime day dayTime) -> UTCTime (addDays 2 day) dayTime
   token <- randomIO <&> TokenId

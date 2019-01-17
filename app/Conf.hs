@@ -13,7 +13,6 @@ import           Protolude                      ( show
                                                 , ($)
                                                 )
 import           Data.Word                      ( Word16 )
-import           Database.Beam.Postgres         ( ConnectInfo(..) )
 import           Control.Monad.Trans.Maybe      ( MaybeT(..)
                                                 , runMaybeT
                                                 )
@@ -69,15 +68,6 @@ data Config
     , signingKey :: T.SigningKey
     , httpSettings :: HttpConfig
     }
-
-connectInfo :: DatabaseConfig -> (DatabaseConfig -> DatabaseUser) -> ConnectInfo
-connectInfo conf usrFn = ConnectInfo (postgresHost conf)
-                                     (postgresPort conf)
-                                     (username user)
-                                     (password user)
-                                     (schema user)
-  where user = usrFn conf
-
 
 makeConfig :: C.Config -> IO (Maybe Config)
 makeConfig conf = runMaybeT $ do
