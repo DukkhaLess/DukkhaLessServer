@@ -33,6 +33,7 @@ resolver: lts-12.11
 #  subdirs:
 #  - auto-update
 #  - wai
+allow-newer: true
 packages:
 - .
 # Dependency packages to be pulled from upstream that are not in the resolver
@@ -40,6 +41,7 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
   - argon2-1.3.0.1
+  - hasql-migration-0.2.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
