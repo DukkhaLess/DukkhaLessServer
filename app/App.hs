@@ -45,6 +45,8 @@ import           Control.Concurrent.STM         ( TVar
                                                 , modifyTVar'
                                                 , newTVarIO
                                                 )
+import           Hasql.Connection              as HC
+import           Hasql.Pool                    as HP
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdoutDev
@@ -75,17 +77,11 @@ app env = void $ runMaybeT $ do
   conf <- MaybeT
     (C.load [C.Required $ unpack $ Conf.confFileName env] >>= Conf.makeConfig)
   lift $ E.bracket
-    ( Pg.connect
+    ( HP.acquire
     $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
     )
-    Pg.close
+    HP.release
     (\conn -> do
-      Schema.runMigrations conn
-      let logger =
-            (case env of
-              Production  -> logStdout
-              Development -> logStdoutDev
-            )
       eitherErrAppState <- runExceptT (generateInitialAppState conf)
       initialAppState   <- either E.throwIO return eitherErrAppState
       sync              <- newTVarIO initialAppState
@@ -127,7 +123,7 @@ generateInitialAppState conf = do
 
 type ActionT' = ActionT LT.Text WebM
 
-app' :: Pg.Connection -> Middleware -> ScottyT LT.Text WebM ()
+app' :: HP.Pool -> Middleware -> ScottyT LT.Text WebM ()
 app' conn logger = do
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger

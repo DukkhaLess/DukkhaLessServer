@@ -16,17 +16,21 @@ import           Protolude                      ( show
                                                 , Eq
                                                 , FilePath
                                                 , (<&>)
+                                                , Int
+                                                , Integer
+                                                , fromInteger
                                                 )
 import           Data.Word                      ( Word16 )
 import           Control.Monad.Trans.Maybe      ( MaybeT(..)
                                                 , runMaybeT
                                                 )
-import           Data.String                    ( String )
 import           Data.Text.Lazy                 ( toLower
                                                 , pack
                                                 , Text
                                                 )
 import           Data.ByteString                ( ByteString )
+import           Hasql.Connection              as HC
+import           Hasql.Pool                    as HP
 import qualified Types                         as T
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdout
@@ -54,17 +58,24 @@ confFileName = toLower . pack . flip (++) ".conf" . show
 
 data DatabaseUser
   = DatabaseUser
-    { username :: String
-    , password :: String
-    , schema :: String
+    { username :: ByteString
+    , password :: ByteString
+    , schema :: ByteString
+    }
+
+data PoolSettings
+  = PoolSettings
+    { poolSize :: Int
+    , timeoutMs :: Integer
     }
 
 data DatabaseConfig
   = DatabaseConfig
     { applicationAccount :: DatabaseUser
     , postgresPort :: Word16
-    , postgresHost :: String
+    , postgresHost :: ByteString
     , migrationsPath :: MigrationsPath
+    , poolSettings :: PoolSettings
     }
 
 newtype HttpConfig
@@ -86,15 +97,30 @@ makeConfig conf = runMaybeT $ do
       name     <- MaybeT $ C.lookup conf "postgres.app.username"
       pass     <- MaybeT $ C.lookup conf "postgres.app.password"
       database <- MaybeT $ C.lookup conf "postgres.app.database"
-      return $ Conf.DatabaseUser name pass database
-    hostname   <- MaybeT $ C.lookup conf "postgres.host"
-    port       <- MaybeT $ C.lookup conf "postgres.port"
+      return $ DatabaseUser name pass database
+    hostname <- MaybeT $ C.lookup conf "postgres.host"
+    port     <- MaybeT $ C.lookup conf "postgres.port"
+    pool     <- do
+      size    <- MaybeT $ C.lookup conf "postgres.pool.maxPool"
+      timeout <- MaybeT $ C.lookup conf "postgres.pool.timeoutMs"
+      return $ PoolSettings size timeout
     migrations <-
       (MaybeT $ C.lookup conf "postgress.migrationsPath") <&> MigrationsPath
-    return $ Conf.DatabaseConfig app port hostname migrations
+    return $ DatabaseConfig app port hostname migrations pool
   httpConfig <- do
     dmn <- MaybeT $ C.lookup conf "http.domain"
     return $ HttpConfig dmn
   sk <- MaybeT $ C.lookup conf "crypto.signingKey"
-  return $ Conf.Config dbConf (T.SigningKey sk) httpConfig
+  return $ Config dbConf (T.SigningKey sk) httpConfig
 
+connectInfo :: DatabaseConfig -> (DatabaseConfig -> DatabaseUser) -> HP.Settings
+connectInfo dbConf getUser =
+  (poolSize pool, fromInteger $ timeoutMs pool, connectionSettings)
+ where
+  user               = getUser dbConf
+  pool               = poolSettings dbConf
+  connectionSettings = HC.settings (postgresHost dbConf)
+                                   (postgresPort dbConf)
+                                   (username user)
+                                   (password user)
+                                   (schema user)
