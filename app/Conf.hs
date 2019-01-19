@@ -11,6 +11,10 @@ import           Protolude                      ( show
                                                 , IO
                                                 , return
                                                 , ($)
+                                                , Ord
+                                                , Bounded
+                                                , Eq
+                                                , FilePath
                                                 )
 import           Data.Word                      ( Word16 )
 import           Control.Monad.Trans.Maybe      ( MaybeT(..)
@@ -34,7 +38,11 @@ import qualified Data.Configurator.Types       as C
 data Environment
   = Development
   | Production
-  deriving (Read, Show)
+  deriving (Read, Show, Ord, Bounded, Eq)
+
+newtype MigrationsPath
+  = MigrationsPath FilePath
+  deriving (Read, Show, Ord, Eq)
 
 logger :: Environment -> Middleware
 logger Production = logStdout
@@ -55,6 +63,7 @@ data DatabaseConfig
     { applicationAccount :: DatabaseUser
     , postgresPort :: Word16
     , postgresHost :: String
+    , migrationsPath :: MigrationsPath
     }
 
 newtype HttpConfig
