@@ -15,7 +15,6 @@ cabal-version:       >= 1.10
 library
   other-modules:       Types
                      , Schema
-                     , Schema.V0001
                      , Crypto
                      , Domain
   build-depends:       base >=4.6 && < 5
