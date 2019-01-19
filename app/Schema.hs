@@ -1,5 +1,15 @@
-module Schema
-  ( module Schema.V0001
-  ) where
+module Schema where
 
-import Schema.V0001(User(..))
+import           Data.UUID.Types                ( UUID )
+import           Data.Time.LocalTime            ( LocalTime )
+import           Data.Text                      ( Text )
+
+data User
+  = User
+    { _userUuid :: UUID
+    , _userUsername :: Text
+    , _userHashedPassword :: Text
+    , _userPublicKey :: Text
+    , _userLastUpdated :: LocalTime
+    , _userCreatedAt :: LocalTime
+    }

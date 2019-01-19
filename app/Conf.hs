@@ -15,6 +15,7 @@ import           Protolude                      ( show
                                                 , Bounded
                                                 , Eq
                                                 , FilePath
+                                                , (<&>)
                                                 )
 import           Data.Word                      ( Word16 )
 import           Control.Monad.Trans.Maybe      ( MaybeT(..)
@@ -86,9 +87,11 @@ makeConfig conf = runMaybeT $ do
       pass     <- MaybeT $ C.lookup conf "postgres.app.password"
       database <- MaybeT $ C.lookup conf "postgres.app.database"
       return $ Conf.DatabaseUser name pass database
-    hostname <- MaybeT $ C.lookup conf "postgres.host"
-    port     <- MaybeT $ C.lookup conf "postgres.port"
-    return $ Conf.DatabaseConfig app port hostname
+    hostname   <- MaybeT $ C.lookup conf "postgres.host"
+    port       <- MaybeT $ C.lookup conf "postgres.port"
+    migrations <-
+      (MaybeT $ C.lookup conf "postgress.migrationsPath") <&> MigrationsPath
+    return $ Conf.DatabaseConfig app port hostname migrations
   httpConfig <- do
     dmn <- MaybeT $ C.lookup conf "http.domain"
     return $ HttpConfig dmn
