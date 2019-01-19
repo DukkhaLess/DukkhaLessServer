@@ -1,1 +1,8 @@
-SELECT * FROM "WHERE" WHERE true;
+CREATE TABLE "users" (
+  userUuid uuid CONSTRAINT userUuidPrimaryKey PRIMARY KEY,
+  userUsername varchar(256) UNIQUE NOT NULL,
+  userHashedPassword varchar(512) NOT NULL,
+  userPublicKey varchar(512) UNIQUE NOT NULL,
+  userLastUpdated timestamp DEFAULT current_timestamp,
+  userCreatedAt timestamp DEFAULT current_timestamp
+);
