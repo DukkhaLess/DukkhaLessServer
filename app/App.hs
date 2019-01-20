@@ -60,7 +60,7 @@ import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
-import           Web.Scotty.Internal.Types (ActionError)
+import           Web.Scotty.Internal.Types      ( ActionError )
 import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
@@ -84,6 +84,10 @@ app env = void $ runMaybeT $ do
     )
     HP.release
     (\conn -> do
+      migrationResult <- runMigrations
+        (Conf.migrationsPath . Conf.databaseConfig conf)
+        conn
+      _                 <- either (fail . show) pure migrationResult
       eitherErrAppState <- runExceptT (generateInitialAppState conf)
       initialAppState   <- either E.throwIO return eitherErrAppState
       sync              <- newTVarIO initialAppState

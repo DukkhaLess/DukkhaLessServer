@@ -24,6 +24,7 @@ data User
 data MigrationFailureReason
   = QueryFailureReason QueryError
   | MigrationErrorReason MigrationError
+  deriving Show
 
 runMigrations :: FilePath -> Connection -> IO (Either MigrationFailureReason ())
 runMigrations p conn = do
