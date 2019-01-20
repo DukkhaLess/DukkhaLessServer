@@ -1,6 +1,7 @@
 module Schema where
 
 import           Protolude
+import           Hasql.Connection
 import           Hasql.Migration
 import           Hasql.Session
 import           Hasql.Transaction.Sessions
@@ -19,8 +20,10 @@ data User
     }
 
 
-runMigrations :: FilePath -> IO [Session (Maybe MigrationError)]
-runMigrations p =
-  loadMigrationsFromDirectory p
-    <&> map runMigration
-    <&> map (transaction Serializable Write)
+runMigrations :: FilePath -> Connection -> IO (Maybe MigrationError)
+runMigrations p conn = do
+  commands <- loadMigrationsFromDirectory p
+  let transactions      = map runMigration commands
+  let sessions          = map (transaction Serializable Write) transactions
+  let executableQueries = map (flip run conn) sessions
+  pure executableQueries
