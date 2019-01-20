@@ -1,6 +1,8 @@
 module Schema where
 
 import           Protolude
+import           Control.Monad.Trans.Except     ( except )
+import           Data.Bifunctor                 ( first )
 import           Hasql.Connection
 import           Hasql.Migration
 import           Hasql.Session
@@ -19,11 +21,20 @@ data User
     , _userCreatedAt :: LocalTime
     }
 
+data MigrationFailureReason
+  = QueryFailureReason QueryError
+  | MigrationErrorReason MigrationError
 
-runMigrations :: FilePath -> Connection -> IO (Maybe MigrationError)
+runMigrations :: FilePath -> Connection -> IO (Either MigrationFailureReason ())
 runMigrations p conn = do
   commands <- loadMigrationsFromDirectory p
-  let transactions      = map runMigration commands
-  let sessions          = map (transaction Serializable Write) transactions
-  let executableQueries = map (flip run conn) sessions
-  pure executableQueries
+  let transactions = map runMigration commands
+  let sessions     = map (transaction Serializable Write) transactions
+  let executableQueries = map
+        (ExceptT . (map (first QueryFailureReason)) . flip run conn)
+        sessions
+  let queries = map
+        (maybe (pure ()) (ExceptT . pure . Left . MigrationErrorReason) =<<)
+        executableQueries
+
+  sequence queries
