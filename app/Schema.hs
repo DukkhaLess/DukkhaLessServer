@@ -1,7 +1,7 @@
 module Schema where
 
 import           Protolude
-import           Control.Monad.Trans.Except     ( except )
+import           Control.Monad.Trans.Except     ( runExceptT )
 import           Data.Bifunctor                 ( first )
 import           Hasql.Connection
 import           Hasql.Migration
@@ -36,5 +36,5 @@ runMigrations p conn = do
   let queries = map
         (maybe (pure ()) (ExceptT . pure . Left . MigrationErrorReason) =<<)
         executableQueries
-
-  sequence queries
+  result <- runExceptT $ sequence queries
+  pure $ map (const ()) result
