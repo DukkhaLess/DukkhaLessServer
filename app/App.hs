@@ -19,6 +19,7 @@ import           Protolude                      ( IO
                                                 , const
                                                 , Int
                                                 , Maybe(..)
+                                                , Show
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -59,6 +60,7 @@ import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
+import           Web.Scotty.Internal.Types (ActionError)
 import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
