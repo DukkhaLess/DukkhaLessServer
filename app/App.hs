@@ -47,6 +47,7 @@ import           Control.Concurrent.STM         ( TVar
                                                 , newTVarIO
                                                 )
 import           Hasql.Connection              as HC
+import qualified Hasql.Session as Session
 import           Hasql.Pool                    as HP
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
@@ -73,6 +74,7 @@ import           Crypto.Random.DRBG             ( HashDRBG
                                                 )
 import qualified Data.Text.Lazy                as LT
 import           Crypto.Random                  ( GenError )
+import qualified Queries                       as Q
 
 app :: Conf.Environment -> IO ()
 app env = void $ runMaybeT $ do
@@ -131,15 +133,15 @@ type ActionT' = ActionT LT.Text WebM
 
 app' :: HP.Pool -> Middleware -> ScottyT LT.Text WebM ()
 app' conn logger = do
+  let runConn = (\session -> liftIO $ Session.run session conn)
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger
   middleware $ gzip def
   post "/login" $ do
     loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- liftIO
-      $ Schema.findUserbyUsername (loginUser ^. username) conn
+    desiredUser <- runSession $ Q.findUserbyUsername (loginUser ^. username)
     case desiredUser of
-      Just user -> do
+      Rifght user -> do
         let correctPassword  = HashedPassword $ Schema._userHashedPassword user
         let providedPassword = loginUser ^. rawPassword
         let passwordVerificationResult =
@@ -147,7 +149,7 @@ app' conn logger = do
         case passwordVerificationResult of
           Argon2.Argon2Ok -> respondWithAuthToken user
           _               -> status status400
-      Nothing -> status status400
+      Left _ -> status status400
 
   post "/register" $ do
     registerUser <- jsonData :: ActionT' RegisterUser
@@ -157,7 +159,7 @@ app' conn logger = do
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
-    liftIO $ Schema.insertUser user conn
+    liftIO $ Q.insertUser user conn
     respondWithAuthToken user
 
 respondWithAuthToken :: Schema.User -> ActionT' ()
