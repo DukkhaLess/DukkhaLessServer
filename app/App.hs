@@ -20,6 +20,7 @@ import           Protolude                      ( IO
                                                 , Int
                                                 , Maybe(..)
                                                 , Show
+                                                , Either(..)
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
