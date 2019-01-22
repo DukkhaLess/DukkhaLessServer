@@ -19,7 +19,6 @@ import           Protolude                      ( IO
                                                 , const
                                                 , Int
                                                 , Maybe(..)
-                                                , Show
                                                 , Either(..)
                                                 , show
                                                 , MonadIO
@@ -49,16 +48,10 @@ import           Control.Concurrent.STM         ( TVar
                                                 , modifyTVar'
                                                 , newTVarIO
                                                 )
-import           Hasql.Connection              as HC
 import qualified Hasql.Session                 as Session
 import qualified Hasql.Statement               as Statement
-import qualified Hasql.Encoders                as HE
 import           Hasql.Pool                    as HP
 import           Network.Wai                    ( Middleware )
-import           Network.Wai.Middleware.RequestLogger
-                                                ( logStdoutDev
-                                                , logStdout
-                                                )
 import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
                                                 , rewritePureWithQueries
                                                 )
@@ -66,7 +59,6 @@ import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
-import           Web.Scotty.Internal.Types      ( ActionError )
 import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
@@ -139,23 +131,24 @@ type ActionT' = ActionT LT.Text WebM
 
 runStatement
   :: MonadIO m
-  => HC.Connection
-  -> Statement.Statement a b
+  => HP.Pool
   -> a
-  -> m (Either Session.QueryError b)
-runStatement conn statement params =
-  liftIO $ Session.run (Session.statement params statement) conn
+  -> Statement.Statement a b
+  -> m (Either HP.UsageError b)
+runStatement pool p statement =
+  liftIO $ HP.use pool (Session.statement p statement)
 
 app' :: HP.Pool -> Middleware -> ScottyT LT.Text WebM ()
-app' conn logger = do
+app' pool logger = do
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger
   middleware $ gzip def
+  let runStatement' = runStatement pool
   post "/login" $ do
     loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- _ Q.findUserByUsername (loginUser ^. username)
+    desiredUser <- runStatement' (loginUser ^. username) Q.findUserByUsername
     case desiredUser of
-      Right user -> do
+      Right (Just user) -> do
         let correctPassword  = HashedPassword $ Schema._userHashedPassword user
         let providedPassword = loginUser ^. rawPassword
         let passwordVerificationResult =
@@ -163,7 +156,7 @@ app' conn logger = do
         case passwordVerificationResult of
           Argon2.Argon2Ok -> respondWithAuthToken user
           _               -> status status400
-      Left _ -> status status400
+      _ -> status status400
 
   post "/register" $ do
     registerUser <- jsonData :: ActionT' RegisterUser
@@ -173,7 +166,7 @@ app' conn logger = do
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
-    result <- _ Q.insertUser user
+    result <- liftIO $ HP.use pool (Session.statement user Q.insertUser)
     case result of
       Left  _ -> status status400
       Right _ -> respondWithAuthToken user
