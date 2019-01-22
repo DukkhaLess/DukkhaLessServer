@@ -137,13 +137,13 @@ type ActionT' = ActionT LT.Text WebM
 app' :: HP.Pool -> Middleware -> ScottyT LT.Text WebM ()
 app' conn logger = do
   let runStatement =
-        (\statement -> liftIO $ Session.run (Session.statement statement) conn)
+        (\statement params -> liftIO $ Session.run (Session.statement params statement) conn)
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger
   middleware $ gzip def
   post "/login" $ do
     loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- runStatement $ Q.findUserByUsername (loginUser ^. username)
+    desiredUser <- runStatement Q.findUserByUsername (loginUser ^. username)
     case desiredUser of
       Right user -> do
         let correctPassword  = HashedPassword $ Schema._userHashedPassword user
@@ -163,7 +163,7 @@ app' conn logger = do
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
-    result <- liftIO $ runStatement $ Q.insertUser user
+    result <- liftIO $ runStatement Q.insertUser user
     case result of
       Left  _ -> status status400
       Right _ -> respondWithAuthToken user
