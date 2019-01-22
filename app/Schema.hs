@@ -4,9 +4,8 @@ import           Protolude
 import           Conf                           ( MigrationsPath(..) )
 import           Control.Monad.Trans.Except     ( runExceptT )
 import           Data.Bifunctor                 ( first )
-import           Hasql.Connection
 import           Hasql.Migration
-import           Hasql.Session
+import           Hasql.Pool
 import           Hasql.Transaction.Sessions
 import           Data.UUID.Types                ( UUID )
 import           Data.Time.LocalTime            ( LocalTime )
@@ -23,19 +22,17 @@ data User
     }
 
 data MigrationFailureReason
-  = QueryFailureReason QueryError
+  = UsageErrorReason UsageError
   | MigrationErrorReason MigrationError
   deriving Show
 
-runMigrations
-  :: MigrationsPath -> Connection -> IO (Either MigrationFailureReason ())
-runMigrations (MigrationsPath p) conn = do
+runMigrations :: MigrationsPath -> Pool -> IO (Either MigrationFailureReason ())
+runMigrations (MigrationsPath p) pool = do
   commands <- loadMigrationsFromDirectory p
   let transactions = map runMigration commands
   let sessions     = map (transaction Serializable Write) transactions
-  let executableQueries = map
-        (ExceptT . (map (first QueryFailureReason)) . flip run conn)
-        sessions
+  let executableQueries =
+        map (ExceptT . (map (first UsageErrorReason)) . use pool) sessions
   let queries = map
         (maybe (pure ()) (ExceptT . pure . Left . MigrationErrorReason) =<<)
         executableQueries
