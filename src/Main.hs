@@ -4,6 +4,7 @@ import           Protolude                      ( IO
                                                 , head
                                                 , fromMaybe
                                                 , (>>=)
+                                                , ($)
                                                 )
 import           System.Environment             ( getArgs )
 import           Text.Read                      ( readMaybe )
