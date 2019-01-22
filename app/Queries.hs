@@ -1,12 +1,9 @@
 module Queries where
 
 import Prelude
-import Control.Monad.Trans.Except
 import           Control.Lens
 import Schema
 import Types
-import Hasql.Connection
-import Hasql.Session
 import Data.ByteString (ByteString)
 import Data.String.QQ
 import Hasql.Statement
@@ -40,15 +37,30 @@ findUserByUsername = Statement sqlS encoder decoder True
             <*> HD.column HD.timestamp
             <*> HD.column HD.timestamp
 
-insertUser :: User -> Session ()
+insertUser :: Statement User ()
 insertUser = Statement sqlS encoder decoder True
     where
         sqlS :: ByteString
         sqlS =
-            [a|
+            [s|
+                INSERT INTO users
+                VALUES (
+                    userUuid = $1,
+                    userUsername = $2,
+                    userHashedPassword = $3,
+                    userPublicKey = $4,
+                    userLastUpdated = $5,
+                    userCreatedAt = $6
+                )
             |]
-        encoder = _
-        decoder = _
+        encoder =
+            contramap _userUuid (HE.param HE.uuid) <>
+            contramap _userUsername (HE.param HE.text) <>
+            contramap _userHashedPassword (HE.param HE.text) <>
+            contramap _userPublicKey (HE.param HE.text) <>
+            contramap _userLastUpdated (HE.param HE.timestamp) <>
+            contramap _userCreatedAt (HE.param HE.timestamp)
+        decoder = HD.unit
 
 usernameValue :: HE.Value Username
 usernameValue = contramap (^. _text) HE.text

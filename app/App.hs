@@ -21,6 +21,7 @@ import           Protolude                      ( IO
                                                 , Maybe(..)
                                                 , Show
                                                 , Either(..)
+                                                , show
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -48,7 +49,7 @@ import           Control.Concurrent.STM         ( TVar
                                                 , newTVarIO
                                                 )
 import           Hasql.Connection              as HC
-import qualified Hasql.Session as Session
+import qualified Hasql.Session                 as Session
 import           Hasql.Pool                    as HP
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
@@ -87,13 +88,14 @@ app env = void $ runMaybeT $ do
     )
     HP.release
     (\conn -> do
-      migrationResult <- runMigrations
+      migrationResult <- Schema.runMigrations
         (Conf.migrationsPath . Conf.databaseConfig conf)
         conn
       _                 <- either (fail . show) pure migrationResult
       eitherErrAppState <- runExceptT (generateInitialAppState conf)
       initialAppState   <- either E.throwIO return eitherErrAppState
       sync              <- newTVarIO initialAppState
+      let logger = Conf.logger conf
       let runActionToIO m = runReaderT (runWebM m) sync
       scottyT 4000 runActionToIO $ app' conn logger
     )
@@ -134,15 +136,16 @@ type ActionT' = ActionT LT.Text WebM
 
 app' :: HP.Pool -> Middleware -> ScottyT LT.Text WebM ()
 app' conn logger = do
-  let runStatement = (\statement -> liftIO $ Session.run (Session.statement statement) conn)
+  let runStatement =
+        (\statement -> liftIO $ Session.run (Session.statement statement) conn)
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger
   middleware $ gzip def
   post "/login" $ do
     loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- runStatement $ Q.findUserbyUsername (loginUser ^. username)
+    desiredUser <- runStatement $ Q.findUserByUsername (loginUser ^. username)
     case desiredUser of
-      Rifght user -> do
+      Right user -> do
         let correctPassword  = HashedPassword $ Schema._userHashedPassword user
         let providedPassword = loginUser ^. rawPassword
         let passwordVerificationResult =
@@ -162,7 +165,7 @@ app' conn logger = do
       >>= either E.throw pure
     result <- liftIO $ runStatement $ Q.insertUser user
     case result of
-      Left _ -> status status400
+      Left  _ -> status status400
       Right _ -> respondWithAuthToken user
 
 respondWithAuthToken :: Schema.User -> ActionT' ()
