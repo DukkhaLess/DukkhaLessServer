@@ -22,6 +22,7 @@ import           Protolude                      ( IO
                                                 , Show
                                                 , Either(..)
                                                 , show
+                                                , MonadIO
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -50,6 +51,8 @@ import           Control.Concurrent.STM         ( TVar
                                                 )
 import           Hasql.Connection              as HC
 import qualified Hasql.Session                 as Session
+import qualified Hasql.Statement               as Statement
+import qualified Hasql.Encoders                as HE
 import           Hasql.Pool                    as HP
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.RequestLogger
@@ -89,13 +92,13 @@ app env = void $ runMaybeT $ do
     HP.release
     (\conn -> do
       migrationResult <- Schema.runMigrations
-        (Conf.migrationsPath . Conf.databaseConfig conf)
+        (Conf.migrationsPath $ Conf.databaseConfig conf)
         conn
       _                 <- either (fail . show) pure migrationResult
       eitherErrAppState <- runExceptT (generateInitialAppState conf)
       initialAppState   <- either E.throwIO return eitherErrAppState
       sync              <- newTVarIO initialAppState
-      let logger = Conf.logger conf
+      let logger = Conf.logger env
       let runActionToIO m = runReaderT (runWebM m) sync
       scottyT 4000 runActionToIO $ app' conn logger
     )
@@ -134,16 +137,23 @@ generateInitialAppState conf = do
 
 type ActionT' = ActionT LT.Text WebM
 
+runStatement
+  :: MonadIO m
+  => HC.Connection
+  -> Statement.Statement a b
+  -> a
+  -> m (Either Session.QueryError b)
+runStatement conn statement params =
+  liftIO $ Session.run (Session.statement params statement) conn
+
 app' :: HP.Pool -> Middleware -> ScottyT LT.Text WebM ()
 app' conn logger = do
-  let runStatement =
-        (\statement params -> liftIO $ Session.run (Session.statement params statement) conn)
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger
   middleware $ gzip def
   post "/login" $ do
     loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- runStatement Q.findUserByUsername (loginUser ^. username)
+    desiredUser <- _ Q.findUserByUsername (loginUser ^. username)
     case desiredUser of
       Right user -> do
         let correctPassword  = HashedPassword $ Schema._userHashedPassword user
@@ -163,7 +173,7 @@ app' conn logger = do
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
-    result <- liftIO $ runStatement Q.insertUser user
+    result <- _ Q.insertUser user
     case result of
       Left  _ -> status status400
       Right _ -> respondWithAuthToken user

@@ -1,6 +1,7 @@
 module Schema where
 
 import           Protolude
+import           Conf                           ( MigrationsPath(..) )
 import           Control.Monad.Trans.Except     ( runExceptT )
 import           Data.Bifunctor                 ( first )
 import           Hasql.Connection
@@ -26,8 +27,9 @@ data MigrationFailureReason
   | MigrationErrorReason MigrationError
   deriving Show
 
-runMigrations :: FilePath -> Connection -> IO (Either MigrationFailureReason ())
-runMigrations p conn = do
+runMigrations
+  :: MigrationsPath -> Connection -> IO (Either MigrationFailureReason ())
+runMigrations (MigrationsPath p) conn = do
   commands <- loadMigrationsFromDirectory p
   let transactions = map runMigration commands
   let sessions     = map (transaction Serializable Write) transactions
