@@ -38,7 +38,6 @@ library
                      , uuid-types
                      , text-short
                      , argon2 >= 1.3.0.1 && < 1.4
-                     , postgresql-simple >= 0.5 && < 0.6
                      , entropy
                      , DRBG
                      , crypto-api
@@ -50,7 +49,7 @@ library
                      , jose-jwt
                      , hasql-migration >= 0.2.0 && < 0.3.0
                      , hasql >= 1.3.0.3 && < 1.4
-                     , hasql-pool >= 0.5.0.1 && < 0.5
+                     , hasql-pool >= 0.5.0 && < 0.6
                      , hasql-transaction
                      , string-qq
   hs-source-dirs:      app

@@ -41,7 +41,14 @@ findUserByUsername = Statement sqlS encoder decoder True
             <*> HD.column HD.timestamp
 
 insertUser :: User -> Session ()
-insertUser = _
+insertUser = Statement sqlS encoder decoder True
+    where
+        sqlS :: ByteString
+        sqlS =
+            [a|
+            |]
+        encoder = _
+        decoder = _
 
 usernameValue :: HE.Value Username
 usernameValue = contramap (^. _text) HE.text
