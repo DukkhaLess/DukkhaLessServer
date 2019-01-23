@@ -5,6 +5,7 @@ import           Protolude                      ( IO
                                                 , fromMaybe
                                                 , (>>=)
                                                 , ($)
+                                                , putStrLn
                                                 )
 import           System.Environment             ( getArgs )
 import           Text.Read                      ( readMaybe )
@@ -13,6 +14,7 @@ import           Conf                           ( Environment(..) )
 
 main :: IO ()
 main = do
+  putStrLn "Dukkhaless Backend Server App!"
   args <- getArgs
   let env = fromMaybe Production $ head args >>= readMaybe
   app env

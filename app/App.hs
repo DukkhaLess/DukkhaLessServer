@@ -22,6 +22,8 @@ import           Protolude                      ( IO
                                                 , Either(..)
                                                 , show
                                                 , MonadIO
+                                                , putStrLn
+                                                , (<>)
                                                 )
 import qualified Control.Exception             as E
 import           Control.Lens
@@ -39,6 +41,7 @@ import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack )
 import           Data.ByteString                ( ByteString )
+import           Data.String                    ( String )
 import           Domain                         ( newUser
                                                 , createAccessToken
                                                 )
@@ -75,14 +78,18 @@ import qualified Queries                       as Q
 
 app :: Conf.Environment -> IO ()
 app env = void $ runMaybeT $ do
+  putStrLn
+    ("Loading application config with environment: " <> (show env) :: String)
   conf <- MaybeT
     (C.load [C.Required $ unpack $ Conf.confFileName env] >>= Conf.makeConfig)
+  putStrLn ("Acquiring database connection pool" :: String)
   lift $ E.bracket
     ( HP.acquire
     $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
     )
     HP.release
     (\conn -> do
+      putStrLn ("Connection pool acquired, preparing initial state" :: String)
       migrationResult <- Schema.runMigrations
         (Conf.migrationsPath $ Conf.databaseConfig conf)
         conn
@@ -90,6 +97,7 @@ app env = void $ runMaybeT $ do
       eitherErrAppState <- runExceptT (generateInitialAppState conf)
       initialAppState   <- either E.throwIO return eitherErrAppState
       sync              <- newTVarIO initialAppState
+      putStrLn ("Initial state established, starting scotty app" :: String)
       let logger = Conf.logger env
       let runActionToIO m = runReaderT (runWebM m) sync
       scottyT 4000 runActionToIO $ app' conn logger
