@@ -129,6 +129,7 @@ instance FromJSON AccessToken where
   parseJSON invalid = typeMismatch "AccessToken" invalid
 
 newtype SigningKey = SigningKey { unSigningKey :: ByteString }
+  deriving (Eq, Show)
 
 newtype SessionToken = SessionToken Base64Content
   deriving (Eq, Show, Generic)

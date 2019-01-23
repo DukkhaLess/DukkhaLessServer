@@ -6,6 +6,7 @@ import           Protolude                      ( IO
                                                 , ($)
                                                 , (.)
                                                 , (>>=)
+                                                , ($>)
                                                 , (^)
                                                 , Either
                                                 , Applicative
@@ -80,8 +81,16 @@ app :: Conf.Environment -> IO ()
 app env = void $ runMaybeT $ do
   putStrLn
     ("Loading application config with environment: " <> (show env) :: String)
-  conf <- MaybeT
-    (C.load [C.Required $ unpack $ Conf.confFileName env] >>= Conf.makeConfig)
+  conf <- MaybeT $ do
+    loaded <- C.load [C.Required $ unpack $ Conf.confFileName env]
+    putStrLn ("Loading config file" :: String)
+    parsed <- Conf.makeConfig loaded
+    case parsed of
+      Just _ -> do
+        putStrLn ("Parsed config file" :: String)
+        pure parsed
+      Nothing ->
+        putStrLn ("Parsed config file, but found nothing" :: String) $> Nothing
   putStrLn ("Acquiring database connection pool" :: String)
   lift $ E.bracket
     ( HP.acquire

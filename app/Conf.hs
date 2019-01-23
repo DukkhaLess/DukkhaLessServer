@@ -62,12 +62,14 @@ data DatabaseUser
     , password :: ByteString
     , schema :: ByteString
     }
+  deriving (Show, Eq)
 
 data PoolSettings
   = PoolSettings
     { poolSize :: Int
     , timeoutMs :: Integer
     }
+  deriving (Show, Eq)
 
 data DatabaseConfig
   = DatabaseConfig
@@ -77,11 +79,13 @@ data DatabaseConfig
     , migrationsPath :: MigrationsPath
     , poolSettings :: PoolSettings
     }
+  deriving (Show, Eq)
 
 newtype HttpConfig
   = HttpConfig
     { domain :: ByteString
     }
+  deriving (Show, Eq)
 
 data Config
   = Config
@@ -89,6 +93,7 @@ data Config
     , signingKey :: T.SigningKey
     , httpSettings :: HttpConfig
     }
+  deriving (Show, Eq)
 
 makeConfig :: C.Config -> IO (Maybe Config)
 makeConfig conf = runMaybeT $ do
