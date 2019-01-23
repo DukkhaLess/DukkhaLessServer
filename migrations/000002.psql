@@ -1,0 +1,7 @@
+CREATE TABLE "journalEntries" (
+  "journalUuid" uuid CONSTRAINT journalUuidPrimaryKey PRIMARY KEY,
+  "journalTitleContent" text NOT NULL,
+  "journalContent" text NOT NULL,
+  "journalLastUpdated" timestamp DEFAULT current_timestamp NOT NULL,
+  "journalCreatedAt" timestamp DEFAULT current_timestamp NOT NULL
+);
