@@ -16,16 +16,16 @@ findUserByUsername = Statement sqlS encoder decoder True
         sqlS :: ByteString
         sqlS =  
             [s|SELECT
-                    userUuid,
-                    userUsername,
-                    userHashedPassword,
-                    userPublicKey,
-                    userLastUpdated,
-                    userCreatedAt
+                    "userUuid",
+                    "userUsername",
+                    "userHashedPassword",
+                    "userPublicKey",
+                    "userLastUpdated",
+                    "userCreatedAt"
                 FROM
-                    users
+                    "users"
                 WHERE
-                    userUsername=$1 |]
+                    "userUsername"=$1 |]
         encoder = HE.param usernameValue
         decoder = 
             HD.rowMaybe
@@ -43,14 +43,14 @@ insertUser = Statement sqlS encoder decoder True
         sqlS :: ByteString
         sqlS =
             [s|
-                INSERT INTO users
+                INSERT INTO "users"
                 VALUES (
-                    userUuid = $1,
-                    userUsername = $2,
-                    userHashedPassword = $3,
-                    userPublicKey = $4,
-                    userLastUpdated = $5,
-                    userCreatedAt = $6
+                    "userUuid" = $1,
+                    "userUsername" = $2,
+                    "userHashedPassword" = $3,
+                    "userPublicKey" = $4,
+                    "userLastUpdated" = $5,
+                    "userCreatedAt" = $6
                 )
             |]
         encoder =

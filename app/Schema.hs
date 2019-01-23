@@ -29,7 +29,7 @@ data MigrationFailureReason
 runMigrations :: MigrationsPath -> Pool -> IO (Either MigrationFailureReason ())
 runMigrations (MigrationsPath p) pool = do
   commands <- loadMigrationsFromDirectory p
-  let transactions = map runMigration commands
+  let transactions = map runMigration (MigrationInitialization : commands)
   let sessions     = map (transaction Serializable Write) transactions
   let executableQueries =
         map (ExceptT . (map (first UsageErrorReason)) . use pool) sessions
