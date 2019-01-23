@@ -110,7 +110,7 @@ makeConfig conf = runMaybeT $ do
       timeout <- MaybeT $ C.lookup conf "postgres.pool.timeoutMs"
       return $ PoolSettings size timeout
     migrations <-
-      (MaybeT $ C.lookup conf "postgress.migrationsPath") <&> MigrationsPath
+      (MaybeT $ C.lookup conf "postgres.migrationsPath") <&> MigrationsPath
     return $ DatabaseConfig app port hostname migrations pool
   httpConfig <- do
     dmn <- MaybeT $ C.lookup conf "http.domain"
