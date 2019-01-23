@@ -44,13 +44,16 @@ insertUser = Statement sqlS encoder decoder True
         sqlS =
             [s|
                 INSERT INTO "users"
+                (
+                    "userUuid",
+                    "userUsername",
+                    "userHashedPassword",
+                    "userPublicKey",
+                    "userLastUpdated",
+                    "userCreatedAt"
+                )
                 VALUES (
-                    "userUuid" = $1,
-                    "userUsername" = $2,
-                    "userHashedPassword" = $3,
-                    "userPublicKey" = $4,
-                    "userLastUpdated" = $5,
-                    "userCreatedAt" = $6
+                  $1, $2, $3, $4, $5, $6
                 )
             |]
         encoder =

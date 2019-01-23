@@ -185,7 +185,9 @@ app' pool logger = do
       >>= either E.throw pure
     result <- liftIO $ HP.use pool (Session.statement user Q.insertUser)
     case result of
-      Left  _ -> status status400
+      Left err -> do
+        putStrLn (show err :: ByteString)
+        status status400
       Right _ -> respondWithAuthToken user
 
 respondWithAuthToken :: Schema.User -> ActionT' ()
