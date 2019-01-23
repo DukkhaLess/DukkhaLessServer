@@ -5,9 +5,11 @@ RUN apt-get update && apt-get install -y \
   libpq-dev
 COPY src /opt/build/src
 COPY app /opt/build/app
+COPY LICENSE /opt/build/LICENSE
 COPY test /opt/build/test
 COPY dukkhaless.cabal /opt/build/dukkhaless.cabal
 COPY stack.yaml  /opt/build/stack.yaml
+RUN cabal check
 RUN stack build && stack test
 
 FROM ubuntu:18.04
