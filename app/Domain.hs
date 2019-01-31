@@ -21,7 +21,12 @@ newUser (RegisterUser name rawPass pubKey) (PasswordSalt salt) = do
   uuid       <- lift (randomIO :: IO UUID)
   hashedPass <- ExceptT $ pure $ hashPassword salt rawPass
   now        <- lift $ utcToLocalTime utc <$> getCurrentTime
-  pure $ User uuid (name ^. _text) (hashedPass ^. _text) (pubKey ^. _text) now now
+  pure $ User uuid
+              (name ^. usernameText)
+              (hashedPass ^. hashedPasswordText)
+              (pubKey ^. publicKeyBase64Content . base64ContentText)
+              now
+              now
 
 createAccessToken :: User -> IO AccessToken
 createAccessToken (User uuid _ _ _ _ _) = do

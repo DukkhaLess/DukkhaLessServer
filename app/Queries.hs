@@ -66,4 +66,4 @@ insertUser = Statement sqlS encoder decoder True
         decoder = HD.unit
 
 usernameValue :: HE.Value Username
-usernameValue = contramap (^. _text) HE.text
+usernameValue = contramap (^. usernameText) HE.text

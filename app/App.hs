@@ -114,8 +114,8 @@ app env = void $ runMaybeT $ do
 
 data AppState =
   AppState
-    { cryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
-    , signingKey :: SigningKey
+    { _cryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
+    , _signingKey :: SigningKey
     }
 
 {- A MonadTrans-like Monad for our application.
@@ -162,12 +162,12 @@ app' pool logger = do
   middleware $ gzip def
   let runStatement' = runStatement pool
   post "/login" $ do
-    loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- runStatement' (loginUser ^. username) Q.findUserByUsername
+    loginUserReq   <- jsonData :: ActionT' LoginUser
+    desiredUser <- runStatement' (loginUserReq ^. loginUserUsername) Q.findUserByUsername
     case desiredUser of
       Right (Just user) -> do
         let correctPassword  = HashedPassword $ Schema._userHashedPassword user
-        let providedPassword = loginUser ^. rawPassword
+        let providedPassword = loginUserReq ^. loginUserRawPassword
         let passwordVerificationResult =
               verifyPassword correctPassword providedPassword
         case passwordVerificationResult of
@@ -176,10 +176,10 @@ app' pool logger = do
       _ -> status status400
 
   post "/register" $ do
-    registerUser <- jsonData :: ActionT' RegisterUser
+    registerUserReq <- jsonData :: ActionT' RegisterUser
     salt         <- nextBytes 16
     user         <-
-      newUser registerUser (PasswordSalt salt)
+      newUser registerUserReq (PasswordSalt salt)
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
@@ -193,13 +193,13 @@ app' pool logger = do
 respondWithAuthToken :: Schema.User -> ActionT' ()
 respondWithAuthToken user = do
   token           <- liftIO $ createAccessToken user
-  tokenSigningKey <- webM (gets signingKey)
+  tokenSigningKey <- webM (gets _signingKey)
   either (const (status status500)) json (signJwt tokenSigningKey token)
 
 nextBytes :: Int -> ActionT' ByteString
 nextBytes byteCount = do
-  (salt, nextGen) <- webM (gets cryptoRandomGen <&> genBytes byteCount)
-  webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
+  (salt, nextGen) <- webM (gets _cryptoRandomGen <&> genBytes byteCount)
+  webM $ modify $ \st -> st { _cryptoRandomGen = nextGen }
   pure salt
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries

@@ -68,6 +68,7 @@ library
                      , GeneralizedNewtypeDeriving
                      , OverloadedStrings
                      , QuasiQuotes
+                     , TemplateHaskell
   exposed-modules:     App
                      , Conf
 
@@ -78,7 +79,7 @@ executable dukkhaless-app
                      , protolude
                      , dukkhaless
   hs-source-dirs:      src
-  ghc-options:         -Wall -Werror
+  ghc-options:         -Wall -Werror -ddump-splices
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
 
