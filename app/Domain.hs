@@ -35,5 +35,3 @@ createAccessToken (User uuid _ _ _ _ _) = do
   token <- randomIO <&> TokenId
   let uid = UserId uuid
   pure $ AccessToken token uid (Expiry inTwoDays)
-
-

@@ -112,12 +112,6 @@ app env = void $ runMaybeT $ do
       scottyT 4000 runActionToIO $ app' conn logger
     )
 
-data AppState =
-  AppState
-    { _cryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
-    , _signingKey :: SigningKey
-    }
-
 {- A MonadTrans-like Monad for our application.
   Its kind is too refined however to allow this to have a MonadTrans instance
 -}
@@ -193,13 +187,13 @@ app' pool logger = do
 respondWithAuthToken :: Schema.User -> ActionT' ()
 respondWithAuthToken user = do
   token           <- liftIO $ createAccessToken user
-  tokenSigningKey <- webM (gets _signingKey)
+  tokenSigningKey <- webM (gets _appStateSigningKey)
   either (const (status status500)) json (signJwt tokenSigningKey token)
 
 nextBytes :: Int -> ActionT' ByteString
 nextBytes byteCount = do
-  (salt, nextGen) <- webM (gets _cryptoRandomGen <&> genBytes byteCount)
-  webM $ modify $ \st -> st { _cryptoRandomGen = nextGen }
+  (salt, nextGen) <- webM (gets _appStateCryptoRandomGen <&> genBytes byteCount)
+  webM $ modify $ \st -> st { _appStateCryptoRandomGen = nextGen }
   pure salt
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries

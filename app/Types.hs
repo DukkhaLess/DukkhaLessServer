@@ -8,14 +8,19 @@ import           Protolude                      ( Eq
                                                 , (<$>)
                                                 , Generic
                                                 , (<>)
+                                                , Maybe
                                                 )
 import           Control.Lens.Combinators
+import           Control.Lens.TH                (makeClassy)
 import           Data.ByteString                ( ByteString )
 import           Data.Aeson
 import           Data.Aeson.Types               ( typeMismatch )
 import           Data.Text                      ( Text )
 import           Data.UUID                      ( UUID )
 import           Data.Time.Clock                ( UTCTime )
+import           Crypto.Random.DRBG             ( HashDRBG
+                                                , GenAutoReseed
+                                                )
 
 declareClassy [d|
   newtype Username = Username { usernameText :: Text }
@@ -35,10 +40,14 @@ declareClassy [d|
   newtype LastUpdated = LastUpdated { lastUpdatedUTCTime :: UTCTime }
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-  newtype TitleCiphertext = TitleCiphertext { titleCiphertextText :: Text }
+  newtype EncryptedMessage = EncryptedMessage
+    { encryptedMessageValue :: Value }
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-  newtype BodyCiphertext = BodyCiphertext { bodyCiphertextText :: Text }
+  newtype TitleCiphertext = TitleCiphertext { titleCiphertextEncryptedMessage :: EncryptedMessage }
+    deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+  newtype BodyCiphertext = BodyCiphertext { bodyCiphertextEncrypedMessage :: EncryptedMessage }
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
   data RegisterUser = RegisterUser
@@ -58,16 +67,30 @@ declareClassy [d|
   newtype TokenId = TokenId { tokenIdUUID :: UUID }
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-  data JournalMetaData = JournalMetaData UserId JournalId CreatedAt LastUpdated TitleCiphertext
-  data JournalEntry = JournalEntry JournalMetaData BodyCiphertext
+  data JournalEntry = JournalEntry
+    { journalEntryJournalId :: JournalId
+    , journalEntryCreatedAt :: CreatedAt
+    , journalEntryUserId :: UserId
+    , journalEntryLastUpdated :: LastUpdated
+    , journalEntryTitleCiphertext :: TitleCiphertext
+    , journalEntryBodyCiphertext :: BodyCiphertext
+    }
+    deriving (Eq, Show, Generic)
 
-  newtype UserId = UserId { userIdUUID :: UUID }
+  data UpdateJournalEntry = UpdateJournalEntry
+    { updateJournalEntryBodyCiphertext :: BodyCiphertext
+    , updateJournalEntryTitleCiphertext :: TitleCiphertext
+    , updateJournalEntryJournalId :: Maybe JournalId
+    }
+    deriving (Eq, Show, Generic)
+
+  newtype UserId = UserId { userIdUUID :: UUID }
       deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-  newtype JournalId = JournalId { journalIdUUID :: UUID }
+  newtype JournalId = JournalId { journalIdUUID :: UUID }
       deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-  newtype Expiry = Expiry { expiryUTCTime :: UTCTime }
+  newtype Expiry = Expiry { expiryUTCTime :: UTCTime }
       deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
   data AccessToken = AccessToken
@@ -84,6 +107,14 @@ declareClassy [d|
     deriving (Eq, Show, Generic)
 
   |]
+
+data AppState =  AppState
+  { _appStateCryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
+  , _appStateSigningKey :: SigningKey
+  }
+  deriving (Generic)
+makeClassy ''AppState
+
 
 instance FromJSON RegisterUser where
   parseJSON = withObject "loginUser" $ \o ->
