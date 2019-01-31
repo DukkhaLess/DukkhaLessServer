@@ -18,6 +18,7 @@ import           Data.Aeson.Types               ( typeMismatch )
 import           Data.Text                      ( Text )
 import           Data.UUID                      ( UUID )
 import           Data.Time.Clock                ( UTCTime )
+import           Control.Concurrent.STM         ( TVar )
 import           Crypto.Random.DRBG             ( HashDRBG
                                                 , GenAutoReseed
                                                 )
@@ -108,8 +109,8 @@ declareClassy [d|
 
   |]
 
-data AppState =  AppState
-  { _appStateCryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
+data AppState = AppState
+  { _appStateCryptoRandomGen :: TVar (GenAutoReseed HashDRBG HashDRBG)
   , _appStateSigningKey :: SigningKey
   }
   deriving (Generic)

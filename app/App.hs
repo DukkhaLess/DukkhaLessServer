@@ -10,13 +10,10 @@ import           Protolude                      ( IO
                                                 , (^)
                                                 , Either
                                                 , Applicative
-                                                , flip
                                                 , either
-                                                , (<&>)
                                                 , (&)
                                                 , pure
                                                 , liftIO
-                                                , (<$>)
                                                 , const
                                                 , Int
                                                 , Maybe(..)
@@ -46,8 +43,7 @@ import           Data.String                    ( String )
 import           Domain                         ( newUser
                                                 , createAccessToken
                                                 )
-import           Control.Concurrent.STM         ( TVar
-                                                , atomically
+import           Control.Concurrent.STM         ( atomically
                                                 , readTVarIO
                                                 , modifyTVar'
                                                 , newTVarIO
@@ -105,28 +101,20 @@ app env = void $ runMaybeT $ do
       _                 <- either (fail . show) pure migrationResult
       eitherErrAppState <- runExceptT (generateInitialAppState conf)
       initialAppState   <- either E.throwIO return eitherErrAppState
-      sync              <- newTVarIO initialAppState
       putStrLn ("Initial state established, starting scotty app" :: String)
       let logger = Conf.logger env
-      let runActionToIO m = runReaderT (runWebM m) sync
+      let runActionToIO m = runReaderT (runWebM m) initialAppState
       scottyT 4000 runActionToIO $ app' conn logger
     )
 
 {- A MonadTrans-like Monad for our application.
   Its kind is too refined however to allow this to have a MonadTrans instance
 -}
-newtype WebM a = WebM { runWebM :: ReaderT (TVar AppState) IO a }
-  deriving (Applicative, Functor, Monad, MonadIO, MonadReader (TVar AppState))
+newtype WebM a = WebM { runWebM :: ReaderT AppState IO a }
+  deriving (Applicative, Functor, Monad, MonadIO, MonadReader AppState)
 
--- | Lift a WebM a into another monad.
 webM :: MonadTrans t => WebM a -> t WebM a
 webM = lift
-
-gets :: (AppState -> b) -> WebM b
-gets f = f <$> (ask >>= liftIO . readTVarIO)
-
-modify :: (AppState -> AppState) -> WebM ()
-modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
 generateInitialAppState :: Conf.Config -> ExceptT GenError IO AppState
 generateInitialAppState conf = do
@@ -136,7 +124,8 @@ generateInitialAppState conf = do
         GenError
         (GenAutoReseed HashDRBG HashDRBG)
     )
-  return $ AppState gen (Conf.signingKey conf)
+  genVar <- lift $ newTVarIO gen
+  return $ AppState genVar (Conf.signingKey conf)
 
 type ActionT' = ActionT LT.Text WebM
 
@@ -156,8 +145,9 @@ app' pool logger = do
   middleware $ gzip def
   let runStatement' = runStatement pool
   post "/login" $ do
-    loginUserReq   <- jsonData :: ActionT' LoginUser
-    desiredUser <- runStatement' (loginUserReq ^. loginUserUsername) Q.findUserByUsername
+    loginUserReq <- jsonData :: ActionT' LoginUser
+    desiredUser  <- runStatement' (loginUserReq ^. loginUserUsername)
+                                  Q.findUserByUsername
     case desiredUser of
       Right (Just user) -> do
         let correctPassword  = HashedPassword $ Schema._userHashedPassword user
@@ -171,8 +161,8 @@ app' pool logger = do
 
   post "/register" $ do
     registerUserReq <- jsonData :: ActionT' RegisterUser
-    salt         <- nextBytes 16
-    user         <-
+    salt            <- nextBytes 16
+    user            <-
       newUser registerUserReq (PasswordSalt salt)
       &   runExceptT
       &   liftIO
@@ -187,13 +177,15 @@ app' pool logger = do
 respondWithAuthToken :: Schema.User -> ActionT' ()
 respondWithAuthToken user = do
   token           <- liftIO $ createAccessToken user
-  tokenSigningKey <- webM (gets _appStateSigningKey)
+  tokenSigningKey <- webM (asks _appStateSigningKey)
   either (const (status status500)) json (signJwt tokenSigningKey token)
 
 nextBytes :: Int -> ActionT' ByteString
 nextBytes byteCount = do
-  (salt, nextGen) <- webM (gets _appStateCryptoRandomGen <&> genBytes byteCount)
-  webM $ modify $ \st -> st { _appStateCryptoRandomGen = nextGen }
+  tVar <- webM $ asks _appStateCryptoRandomGen
+  currentGen <- liftIO $ readTVarIO tVar
+  let (salt, nextGen) = genBytes byteCount currentGen
+  liftIO $ atomically $ modifyTVar' tVar (const nextGen)
   pure salt
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
