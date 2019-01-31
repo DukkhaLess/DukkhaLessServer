@@ -70,7 +70,7 @@ declareClassy [d|
 
   data JournalEntry = JournalEntry
     { journalEntryJournalId :: JournalId
-    , journalEntryCreatedAt :: CreatedAt
+    , journalEntryCreatedAt :: Maybe CreatedAt
     , journalEntryUserId :: UserId
     , journalEntryLastUpdated :: LastUpdated
     , journalEntryTitleCiphertext :: TitleCiphertext

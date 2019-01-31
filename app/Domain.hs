@@ -35,3 +35,20 @@ createAccessToken (User uuid _ _ _ _ _) = do
   token <- randomIO <&> TokenId
   let uid = UserId uuid
   pure $ AccessToken token uid (Expiry inTwoDays)
+
+
+updatedJournalEntry :: UserId -> UpdateJournalEntry -> IO JournalEntry
+updatedJournalEntry owner entry = do
+  let maybeId = entry ^. updateJournalEntryJournalId
+  uuid <- maybe randomIO pure $ map (flip (^.) journalIdUUID) maybeId
+  lastUp <- getCurrentTime
+  pure $ JournalEntry
+    (JournalId uuid)
+    Nothing
+    owner
+    (LastUpdated lastUp)
+    (entry ^. updateJournalEntryTitleCiphertext . titleCiphertext)
+    (entry ^. updateJournalEntryBodyCiphertext . bodyCiphertext)
+
+
+
