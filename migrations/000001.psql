@@ -3,6 +3,6 @@ CREATE TABLE "users" (
   "userUsername" varchar(256) UNIQUE NOT NULL,
   "userHashedPassword" varchar(512) NOT NULL,
   "userPublicKey" varchar(512) UNIQUE NOT NULL,
-  "userLastUpdated" timestamp DEFAULT current_timestamp NOT NULL,
-  "userCreatedAt" timestamp DEFAULT current_timestamp NOT NULL
+  "userLastUpdated" timestamptz DEFAULT current_timestamp NOT NULL,
+  "userCreatedAt" timestamptz DEFAULT current_timestamp NOT NULL
 );

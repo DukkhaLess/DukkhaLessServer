@@ -3,6 +3,6 @@ CREATE TABLE "journalEntries" (
   "userUuid" uuid REFERENCES "users"("userUuid"),
   "journalTitleContent" text NOT NULL,
   "journalContent" text NOT NULL,
-  "journalLastUpdated" timestamp DEFAULT current_timestamp NOT NULL,
-  "journalCreatedAt" timestamp DEFAULT current_timestamp NOT NULL
+  "journalLastUpdated" timestamptz DEFAULT current_timestamp NOT NULL,
+  "journalCreatedAt" timestamptz DEFAULT current_timestamp NOT NULL
 );

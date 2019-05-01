@@ -37,8 +37,8 @@ findUserByUsername = Statement sqlS encoder decoder True
             <*> HD.column HD.text
             <*> HD.column HD.text
             <*> HD.column HD.text
-            <*> HD.column HD.timestamp
-            <*> HD.column HD.timestamp
+            <*> HD.column HD.timestamptz
+            <*> HD.column HD.timestamptz
 
 usernameValue :: HE.Value Username
 usernameValue = contramap (^. _usernameText) HE.text
@@ -95,8 +95,8 @@ insertJournal = Statement sqlS encoder decoder True
             contramap (view (_createT . _journalUserUuid)) (HE.param HE.uuid) <>
             contramap (view (_createT . _journalTitleContent)) (HE.param HE.text) <>
             contramap (view (_createT . _journalContent)) (HE.param HE.text) <>
-            contramap (view (_createLastUpdated)) (HE.param HE.timestamp) <>
-            contramap (view (_createCreatedAt)) (HE.param HE.timestamp)
+            contramap (view (_createLastUpdated)) (HE.param HE.timestamptz) <>
+            contramap (view (_createCreatedAt)) (HE.param HE.timestamptz)
         decoder = HD.unit
 
 updateJournal :: Statement (Update Journal) ()
@@ -119,5 +119,5 @@ updateJournal = Statement sqlS encoder decoder True
             contramap (view (_updateT . _journalUserUuid)) (HE.param HE.uuid) <>
             contramap (view (_updateT . _journalTitleContent)) (HE.param HE.text) <>
             contramap (view (_updateT . _journalContent)) (HE.param HE.text) <>
-            contramap (view _updateLastUpdated) (HE.param HE.timestamp)
+            contramap (view _updateLastUpdated) (HE.param HE.timestamptz)
         decoder = HD.unit
