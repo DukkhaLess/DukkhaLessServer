@@ -4,12 +4,14 @@ import Prelude
 import           Control.Lens
 import Control.Arrow
 import Schema
-import Types
 import Data.ByteString (ByteString)
 import Data.String.QQ
 import Hasql.Statement
 import qualified Hasql.Encoders as HE
 import qualified Hasql.Decoders as HD
+import           Data.Text                      ( Text )
+import Types
+import Schema.Types
 
 findUserByUsername :: Statement Username (Maybe (Timestamped User))
 findUserByUsername = Statement sqlS encoder decoder True
@@ -38,6 +40,9 @@ findUserByUsername = Statement sqlS encoder decoder True
             <*> HD.column HD.timestamp
             <*> HD.column HD.timestamp
 
+usernameValue :: HE.Value Username
+usernameValue = contramap (^. _usernameText) HE.text
+
 insertUser :: Statement User ()
 insertUser = Statement sqlS encoder decoder True
     where
@@ -58,16 +63,13 @@ insertUser = Statement sqlS encoder decoder True
                 )
             |]
         encoder =
-            contramap _userUuid (HE.param HE.uuid) <>
-            contramap _userUsername (HE.param HE.text) <>
-            contramap _userHashedPassword (HE.param HE.text) <>
-            contramap _userPublicKey (HE.param HE.text) <>
-            contramap _userLastUpdated (HE.param HE.timestamp) <>
-            contramap _userCreatedAt (HE.param HE.timestamp)
+            contramap (view _userUuid) (HE.param HE.uuid) <>
+            contramap (view _userUsername) (HE.param HE.text) <>
+            contramap (view _userHashedPassword) (HE.param HE.text) <>
+            contramap (view _userPublicKey) (HE.param HE.text) <>
+            contramap (view _userLastUpdated) (HE.param HE.timestamp) <>
+            contramap (view _userCreatedAt) (HE.param HE.timestamp)
         decoder = HD.unit
-
-usernameValue :: HE.Value Username
-usernameValue = contramap (^. usernameText) HE.text
 
 insertJournal :: Statement (Create Journal) ()
 insertJournal = Statement sqlS encoder decoder True
@@ -89,12 +91,12 @@ insertJournal = Statement sqlS encoder decoder True
                 )
             |]
         encoder =
-            contramap (_createT >>> _journalUuid) (HE.param HE.uuid) <>
-            contramap (_createT >>> _journalUserUuid) (HE.param HE.uuid) <>
-            contramap (_createT >>> _journalTitleContent) (HE.param HE.text) <>
-            contramap (_createT >>> _journalContent) (HE.param HE.text) <>
-            contramap (_createLastUpdated) (HE.param HE.timestamp) <>
-            contramap (_createCreatedAt) (HE.param HE.timestamp)
+            contramap (view (_createT . _journalUuid)) (HE.param HE.uuid) <>
+            contramap (view (_createT . _journalUserUuid)) (HE.param HE.uuid) <>
+            contramap (view (_createT . _journalTitleContent)) (HE.param HE.text) <>
+            contramap (view (_createT . _journalContent)) (HE.param HE.text) <>
+            contramap (view (_createLastUpdated)) (HE.param HE.timestamp) <>
+            contramap (view (_createCreatedAt)) (HE.param HE.timestamp)
         decoder = HD.unit
 
 updateJournal :: Statement (Update Journal) ()
@@ -113,9 +115,9 @@ updateJournal = Statement sqlS encoder decoder True
                 WHERE "journalUserUuid" = $2
             |]
         encoder =
-            contramap (_updateT >>> _journalUuid) (HE.param HE.uuid) <>
-            contramap (_updateT >>> _journalUserUuid) (HE.param HE.uuid) <>
-            contramap (_updateT >>> _journalTitleContent) (HE.param HE.text) <>
-            contramap (_updateT >>> _journalContent) (HE.param HE.text) <>
-            contramap _updateLastUpdated (HE.param HE.timestamp)
+            contramap (view (_updateT . _journalUuid)) (HE.param HE.uuid) <>
+            contramap (view (_updateT . _journalUserUuid)) (HE.param HE.uuid) <>
+            contramap (view (_updateT . _journalTitleContent)) (HE.param HE.text) <>
+            contramap (view (_updateT . _journalContent)) (HE.param HE.text) <>
+            contramap (view _updateLastUpdated) (HE.param HE.timestamp)
         decoder = HD.unit

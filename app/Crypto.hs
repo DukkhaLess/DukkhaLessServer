@@ -29,9 +29,10 @@ import           Crypto.Argon2                  ( verifyEncoded
                                                 )
 import           Types                          ( RawPassword(..)
                                                 , HashedPassword(..)
-                                                , SigningKey(..)
-                                                , SessionToken(..)
                                                 , Base64Content(..)
+                                                )
+import           Domain.Types                   ( SigningKey(..)
+                                                , SessionToken(..)
                                                 )
 
 hashPassword :: ByteString -> RawPassword -> Either Argon2Status HashedPassword
