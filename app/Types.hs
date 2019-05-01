@@ -8,7 +8,6 @@ import           Protolude                      ( Eq
                                                 , (<$>)
                                                 , Generic
                                                 , (<>)
-                                                , Maybe
                                                 )
 import           Control.Lens.Combinators
 import           Control.Lens.TH                (makeClassy)

@@ -1,7 +1,9 @@
+{-# LANGUAGE FunctionalDependencies #-}
 module Schema where
 
 import           Protolude
 import           Conf                           ( MigrationsPath(..) )
+import           Control.Lens.TH                ( declareClassy )
 import           Control.Monad.Trans.Except     ( runExceptT )
 import           Data.Bifunctor                 ( first )
 import           Hasql.Migration
@@ -30,38 +32,42 @@ runMigrations (MigrationsPath p) pool = do
   result <- runExceptT $ sequence queries
   pure $ map (const ()) result
 
-data Create t
-    = Create 
-      { _createT :: t
-      , _createLastUpdated :: LocalTime
-      , _createCreatedAt :: LocalTime
+
+declareClassy [d|
+  data Create t
+      = Create
+        { _createT :: t
+        , _createLastUpdated :: LocalTime
+        , _createCreatedAt :: LocalTime
+        }
+
+  data Update t
+      = Update
+        { _updateT :: t
+        , _updateLastUpdated :: LocalTime
+        }
+
+  data Timestamped t
+      = Timestamped
+        { _timestampedT
+        , _timestampedCreatedAt :: LocalTime
+        , timestamptedLastUpdated :: LocalTime
+        }
+
+  data User
+    = User
+      { _userUuid :: UUID
+      , _userUsername :: Text
+      , _userHashedPassword :: Text
+      , _userPublicKey :: Text
       }
 
-data Update t
-    = Update 
-      { _updateT :: t
-      , _updateLastUpdated :: LocalTime
+  data Journal
+    = Journal
+      { _journalUuid :: UUID
+      , _journalUserUuid :: UUID
+      , _journalTitlteContent :: Text
+      , _journalContent :: Text
       }
 
-data Timestamped t
-    = Timestamped
-      { _timestampedT
-      , _timestampedCreatedAt :: LocalTime
-      , timestamptedLastUpdated :: LocalTime
-      }
- 
-data User
-  = User
-    { _userUuid :: UUID
-    , _userUsername :: Text
-    , _userHashedPassword :: Text
-    , _userPublicKey :: Text
-    }
-
-data Journal
-  = Journal
-    { _journalUuid :: UUID
-    , _journalUserUuid :: UUID
-    , _journalTitlteContent :: Text
-    , _journalContent :: Text
-    }
+  |]
