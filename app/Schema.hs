@@ -11,15 +11,6 @@ import           Data.UUID.Types                ( UUID )
 import           Data.Time.LocalTime            ( LocalTime )
 import           Data.Text                      ( Text )
 
-data User
-  = User
-    { _userUuid :: UUID
-    , _userUsername :: Text
-    , _userHashedPassword :: Text
-    , _userPublicKey :: Text
-    , _userLastUpdated :: LocalTime
-    , _userCreatedAt :: LocalTime
-    }
 
 data MigrationFailureReason
   = UsageErrorReason UsageError
@@ -38,3 +29,24 @@ runMigrations (MigrationsPath p) pool = do
         executableQueries
   result <- runExceptT $ sequence queries
   pure $ map (const ()) result
+
+data User
+  = User
+    { _userUuid :: UUID
+    , _userUsername :: Text
+    , _userHashedPassword :: Text
+    , _userPublicKey :: Text
+    , _userLastUpdated :: LocalTime
+    , _userCreatedAt :: LocalTime
+    }
+
+data Journal
+  = Journal
+    { _journalUuid :: UUID
+    , _journalUserUuid :: UUID
+    , _journalTitlteContent :: Text
+    , _journalContent :: Text
+    , _journalLastUpdated :: LocalTime
+    , _journalCreatedAt :: LocalTime
+    }
+

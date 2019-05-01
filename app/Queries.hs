@@ -67,3 +67,7 @@ insertUser = Statement sqlS encoder decoder True
 
 usernameValue :: HE.Value Username
 usernameValue = contramap (^. usernameText) HE.text
+
+insertJournal :: Statement Journal ()
+insertJournal = Statement sqlS encoder decoder True
+            where
