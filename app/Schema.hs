@@ -30,14 +30,32 @@ runMigrations (MigrationsPath p) pool = do
   result <- runExceptT $ sequence queries
   pure $ map (const ()) result
 
+data Create t
+    = Create 
+      { _createT :: t
+      , _createLastUpdated :: LocalTime
+      , _createCreatedAt :: LocalTime
+      }
+
+data Update t
+    = Update 
+      { _updateT :: t
+      , _updateLastUpdated :: LocalTime
+      }
+
+data Timestamped t
+    = Timestamped
+      { _timestampedT
+      , _timestampedCreatedAt :: LocalTime
+      , timestamptedLastUpdated :: LocalTime
+      }
+ 
 data User
   = User
     { _userUuid :: UUID
     , _userUsername :: Text
     , _userHashedPassword :: Text
     , _userPublicKey :: Text
-    , _userLastUpdated :: LocalTime
-    , _userCreatedAt :: LocalTime
     }
 
 data Journal
@@ -46,7 +64,4 @@ data Journal
     , _journalUserUuid :: UUID
     , _journalTitlteContent :: Text
     , _journalContent :: Text
-    , _journalLastUpdated :: LocalTime
-    , _journalCreatedAt :: LocalTime
     }
-

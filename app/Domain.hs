@@ -37,6 +37,15 @@ createAccessToken (User uuid _ _ _ _ _) = do
   pure $ AccessToken token uid (Expiry inTwoDays)
 
 
+update :: forall a . a -> IO (Update a)
+update a = getCurrentTime <$> Update a
+
+create :: forall a . a -> IO (Create a)
+create a = do
+  now <- getCurrentTime
+  Create a now now
+
+
 updatedJournalEntry :: UserId -> UpdateJournalEntry -> IO JournalEntry
 updatedJournalEntry owner entry = do
   let uuid = entry ^. updateJournalEntryJournalId
@@ -50,9 +59,9 @@ updatedJournalEntry owner entry = do
     (entry ^. updateJournalEntryBodyCiphertext . bodyCiphertext)
 
 
-createJournalEntry :: UserId -> CreateJournalEntry -> IO JournalEntry
+createJournalEntry :: UserId -> CreateJournalEntry -> IO JourEntry
 createJournalEntry owner entry = do
-  uuid <- randomIO :: IO UUID
+  uuid   <- randomIO :: IO UUID
   lastUp <- getCurrentTime
   pure $ JournalEntry
     (JournalId uuid)
