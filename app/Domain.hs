@@ -40,7 +40,7 @@ createAccessToken (User uuid _ _ _ _ _) = do
 updatedJournalEntry :: UserId -> UpdateJournalEntry -> IO JournalEntry
 updatedJournalEntry owner entry = do
   let maybeId = entry ^. updateJournalEntryJournalId
-  uuid <- maybe randomIO pure $ map (flip (^.) journalIdUUID) maybeId
+  uuid   <- maybe randomIO pure $ map (flip (^.) journalIdUUID) maybeId
   lastUp <- getCurrentTime
   pure $ JournalEntry
     (JournalId uuid)
@@ -49,6 +49,3 @@ updatedJournalEntry owner entry = do
     (LastUpdated lastUp)
     (entry ^. updateJournalEntryTitleCiphertext . titleCiphertext)
     (entry ^. updateJournalEntryBodyCiphertext . bodyCiphertext)
-
-
-
