@@ -3,7 +3,7 @@ module Domain where
 import           Protolude
 import           Control.Lens
 import           Types
-import           Domain.Typers
+import           Domain.Types
 import           Crypto                         ( hashPassword )
 import           Schema.Types
 import           Data.UUID                      ( UUID )
@@ -21,13 +21,14 @@ newUser :: RegisterUser -> PasswordSalt -> ExceptT Argon2Status IO (Create User)
 newUser (RegisterUser name rawPass pubKey) (PasswordSalt salt) = do
   uuid       <- lift (randomIO :: IO UUID)
   hashedPass <- ExceptT $ pure $ hashPassword salt rawPass
-  create $ User uuid
-              (name ^. usernameText)
-              (hashedPass ^. hashedPasswordText)
-              (pubKey ^. publicKeyBase64Content . base64ContentText)
+  lift $ createIO $ User
+    uuid
+    (name ^. usernameText)
+    (hashedPass ^. hashedPasswordText)
+    (pubKey ^. publicKeyBase64Content . base64ContentText)
 
 createAccessToken :: User -> IO AccessToken
-createAccessToken (User uuid _ _ _ _ _) = do
+createAccessToken (User uuid _ _ _) = do
   inTwoDays <- getCurrentTime
     <&> \(UTCTime day dayTime) -> UTCTime (addDays 2 day) dayTime
   token <- randomIO <&> TokenId
@@ -35,31 +36,47 @@ createAccessToken (User uuid _ _ _ _ _) = do
   pure $ AccessToken token uid (Expiry inTwoDays)
 
 
-update :: forall a. a -> IO (Update a)
-update a = getCurrentTime <$> Update a
+updateIO :: forall a . a -> IO (Update a)
+updateIO a = Update a <$> getCurrentTime
 
-create :: forall a. a -> IO (Create a)
-create a = do
+createIO :: forall a . a -> IO (Create a)
+createIO a = do
   now <- getCurrentTime
-  Create a now now
+  pure $ Create a now now
 
 
-updatedJournalEntry :: UserId -> UpdateJournalEntry -> IO (Update JournalEntry)
+updatedJournalEntry :: UserId -> UpdateJournalEntry -> IO (Update Journal)
 updatedJournalEntry owner entry = do
-  let uuid = entry ^. updateJournalEntryJournalId
+  let uuid = entry ^. updateJournalEntryJournalId . journalIdUUID
   lastUp <- getCurrentTime
-  update $ JournalEntry
+  updateIO $ Journal
     uuid
-    owner
-    (entry ^. updateJournalEntryTitleCiphertext . titleCiphertext)
-    (entry ^. updateJournalEntryBodyCiphertext . bodyCiphertext)
+    (owner ^. userIdUUID)
+    (  entry
+    ^. updateJournalEntryTitleCiphertext
+    .  titleCiphertext
+    .  titleCiphertextEncryptedMessage
+    )
+    (  entry
+    ^. updateJournalEntryBodyCiphertext
+    .  bodyCiphertext
+    .  bodyCiphertextEncryptedMessage
+    )
 
 
-createJournalEntry :: UserId -> CreateJournalEntry -> IO (Create JournalEntry)
+createJournalEntry :: UserId -> CreateJournalEntry -> IO (Create Journal)
 createJournalEntry owner entry = do
-  uuid   <- randomIO :: IO UUID
-  create $ JournalEntry
-    (JournalId uuid)
-    owner
-    (entry ^. createJournalEntryTitleCiphertext . titleCiphertext)
-    (entry ^. createJournalEntryBodyCiphertext . bodyCiphertext)
+  uuid <- randomIO :: IO UUID
+  createIO $ Journal
+    uuid
+    (owner ^. userIdUUID)
+    (  entry
+    ^. updateJournalEntryTitleCiphertext
+    .  titleCiphertext
+    .  titleCiphertextEncryptedMessage
+    )
+    (  entry
+    ^. updateJournalEntryBodyCiphertext
+    .  bodyCiphertext
+    .  bodyCiphertextEncryptedMessage
+    )

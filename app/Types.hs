@@ -36,7 +36,7 @@ declareClassy [d|
   newtype TitleCiphertext = TitleCiphertext { titleCiphertextEncryptedMessage :: EncryptedMessage }
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-  newtype BodyCiphertext = BodyCiphertext { bodyCiphertextEncrypedMessage :: EncryptedMessage }
+  newtype BodyCiphertext = BodyCiphertext { bodyCiphertextEncryptedMessage :: EncryptedMessage }
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
   newtype UserId = UserId { userIdUUID :: UUID }
