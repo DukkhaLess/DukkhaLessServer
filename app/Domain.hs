@@ -56,11 +56,13 @@ updatedJournalEntry owner entry = do
     ^. updateJournalEntryTitleCiphertext
     .  titleCiphertext
     .  titleCiphertextEncryptedMessage
+    . encryptedMessageText
     )
     (  entry
     ^. updateJournalEntryBodyCiphertext
     .  bodyCiphertext
     .  bodyCiphertextEncryptedMessage
+    . encryptedMessageText
     )
 
 
@@ -74,9 +76,11 @@ createJournalEntry owner entry = do
     ^. updateJournalEntryTitleCiphertext
     .  titleCiphertext
     .  titleCiphertextEncryptedMessage
+    . encryptedMessageText
     )
     (  entry
     ^. updateJournalEntryBodyCiphertext
     .  bodyCiphertext
     .  bodyCiphertextEncryptedMessage
+    . encryptedMessageText
     )
