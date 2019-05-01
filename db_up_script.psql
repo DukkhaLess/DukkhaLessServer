@@ -1,0 +1,4 @@
+CREATE DATABASE dukkhaless; 
+CREATE USER dukkhaless WITH ENCRYPTED PASSWORD 'secret';
+GRANT ALL PRIVILEGES ON DATABASE dukkhaless TO dukkhaless;
+ALTER DATABASE dukkhaless OWNER TO dukkhaless; 
