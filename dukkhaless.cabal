@@ -71,6 +71,7 @@ library
                      , OverloadedStrings
                      , QuasiQuotes
                      , TemplateHaskell
+                     , ExistentialQualifications
   exposed-modules:     App
                      , Conf
 

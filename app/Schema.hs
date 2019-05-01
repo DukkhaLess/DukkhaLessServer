@@ -2,15 +2,11 @@ module Schema where
 
 import           Protolude
 import           Conf                           ( MigrationsPath(..) )
-import           Control.Lens.TH                ( declareClassy )
 import           Control.Monad.Trans.Except     ( runExceptT )
 import           Data.Bifunctor                 ( first )
 import           Hasql.Migration
 import           Hasql.Pool
 import           Hasql.Transaction.Sessions
-import           Data.UUID.Types                ( UUID )
-import           Data.Time.LocalTime            ( LocalTime )
-import           Data.Text                      ( Text )
 
 
 data MigrationFailureReason

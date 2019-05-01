@@ -43,7 +43,7 @@ findUserByUsername = Statement sqlS encoder decoder True
 usernameValue :: HE.Value Username
 usernameValue = contramap (^. _usernameText) HE.text
 
-insertUser :: Statement User ()
+insertUser :: Statement (Create User) ()
 insertUser = Statement sqlS encoder decoder True
     where
         sqlS :: ByteString
