@@ -31,7 +31,6 @@ import           Data.Text.Lazy                 ( toLower
 import           Data.ByteString                ( ByteString )
 import           Hasql.Connection              as HC
 import           Hasql.Pool                    as HP
-import qualified Types                         as T
 import qualified Domain.Types                  as T
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdout
