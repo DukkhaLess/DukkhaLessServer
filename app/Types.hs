@@ -30,7 +30,7 @@ declareClassy [d|
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
   newtype EncryptedMessage = EncryptedMessage
-    { encryptedMessageValue :: Value }
+    { encryptedMessageText :: Text }
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
   newtype TitleCiphertext = TitleCiphertext { titleCiphertextEncryptedMessage :: EncryptedMessage }

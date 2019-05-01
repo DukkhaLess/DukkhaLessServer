@@ -7,9 +7,6 @@ import           Domain.Types
 import           Crypto                         ( hashPassword )
 import           Schema.Types
 import           Data.UUID                      ( UUID )
-import           Data.Time.LocalTime            ( utcToLocalTime
-                                                , utc
-                                                )
 import           Data.Time.Clock                ( getCurrentTime
                                                 , UTCTime(..)
                                                 )
@@ -48,7 +45,6 @@ createIO a = do
 updatedJournalEntry :: UserId -> UpdateJournalEntry -> IO (Update Journal)
 updatedJournalEntry owner entry = do
   let uuid = entry ^. updateJournalEntryJournalId . journalIdUUID
-  lastUp <- getCurrentTime
   updateIO $ Journal
     uuid
     (owner ^. userIdUUID)
@@ -73,13 +69,13 @@ createJournalEntry owner entry = do
     uuid
     (owner ^. userIdUUID)
     (  entry
-    ^. updateJournalEntryTitleCiphertext
+    ^. createJournalEntryTitleCiphertext 
     .  titleCiphertext
     .  titleCiphertextEncryptedMessage
     . encryptedMessageText
     )
     (  entry
-    ^. updateJournalEntryBodyCiphertext
+    ^. createJournalEntryBodyCiphertext
     .  bodyCiphertext
     .  bodyCiphertextEncryptedMessage
     . encryptedMessageText
