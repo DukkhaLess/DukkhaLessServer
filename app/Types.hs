@@ -81,7 +81,13 @@ declareClassy [d|
   data UpdateJournalEntry = UpdateJournalEntry
     { updateJournalEntryBodyCiphertext :: BodyCiphertext
     , updateJournalEntryTitleCiphertext :: TitleCiphertext
-    , updateJournalEntryJournalId :: Maybe JournalId
+    , updateJournalEntryJournalId :: JournalId
+    }
+    deriving (Eq, Show, Generic)
+
+  data CreateJournalEntry = CreateJournalEntry
+    { createJournalEntryBodyCiphertext :: BodyCiphertext 
+    , createJournalEntryTitleCiphertext :: TitleCiphertext
     }
     deriving (Eq, Show, Generic)
 

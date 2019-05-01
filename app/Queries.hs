@@ -70,4 +70,8 @@ usernameValue = contramap (^. usernameText) HE.text
 
 insertJournal :: Statement Journal ()
 insertJournal = Statement sqlS encoder decoder True
-            where
+    where
+        sqlS :: ByteString
+        sqlS = _s
+        encoder = _e
+        decoder = _d
