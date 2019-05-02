@@ -59,6 +59,7 @@ import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
+import           Domain.Types
 import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
@@ -150,7 +151,7 @@ app' pool logger = do
                                   Q.findUserByUsername
     case desiredUser of
       Right (Just user) -> do
-        let correctPassword  = HashedPassword $ Schema._userHashedPassword user
+        let correctPassword  = HashedPassword $ userHashedPassword user
         let providedPassword = loginUserReq ^. loginUserRawPassword
         let passwordVerificationResult =
               verifyPassword correctPassword providedPassword
@@ -174,9 +175,9 @@ app' pool logger = do
         status status400
       Right _ -> respondWithAuthToken user
 
-respondWithAuthToken :: Schema.User -> ActionT' ()
-respondWithAuthToken user = do
-  token           <- liftIO $ createAccessToken user
+respondWithAuthToken :: UserId-> ActionT' ()
+respondWithAuthToken userId = do
+  token           <- liftIO $ createAccessToken userId
   tokenSigningKey <- webM (asks _appStateSigningKey)
   either (const (status status500)) json (signJwt tokenSigningKey token)
 

@@ -24,8 +24,8 @@ newUser (RegisterUser name rawPass pubKey) (PasswordSalt salt) = do
     (hashedPass ^. hashedPasswordText)
     (pubKey ^. publicKeyBase64Content . base64ContentText)
 
-createAccessToken :: User -> IO AccessToken
-createAccessToken (User uuid _ _ _) = do
+createAccessToken :: UserId -> IO AccessToken
+createAccessToken (UserId uuid) = do
   inTwoDays <- getCurrentTime
     <&> \(UTCTime day dayTime) -> UTCTime (addDays 2 day) dayTime
   token <- randomIO <&> TokenId
@@ -34,7 +34,9 @@ createAccessToken (User uuid _ _ _) = do
 
 
 updateIO :: forall a . a -> IO (Update a)
-updateIO a = Update <<< getCurrentTime <$> a
+updateIO a = do
+  now <- getCurrentTime 
+  pure $ Update now a
 
 createIO :: forall a . a -> IO (Create a)
 createIO a = do
