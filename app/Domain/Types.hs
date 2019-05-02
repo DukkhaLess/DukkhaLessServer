@@ -61,9 +61,19 @@ declareClassy [d|
       deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
   data AccessToken = AccessToken
-    { accessTokenTokenId ::  TokenId
+    { accessTokenTokenId :: TokenId
     , accessTokenUserId :: UserId
     , accessTokenExpiry :: Expiry
+    }
+    deriving (Eq, Show, Generic)
+
+  data User = User
+    { userUuid :: UserId
+    , userUsername :: Username
+    , userHashedPassword :: HashedPassword
+    , userPublicKey :: PublicKey
+    , userLastUpdated :: LastUpdated
+    , userCreatedAt :: CreatedAt 
     }
     deriving (Eq, Show, Generic)
 

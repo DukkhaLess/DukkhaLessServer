@@ -26,3 +26,4 @@ runMigrations (MigrationsPath p) pool = do
         executableQueries
   result <- runExceptT $ sequence queries
   pure $ map (const ()) result
+

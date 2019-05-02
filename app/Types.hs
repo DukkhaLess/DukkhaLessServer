@@ -49,5 +49,6 @@ declareClassy [d|
     deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
   newtype HashedPassword = HashedPassword { hashedPasswordText :: Text }
+    deriving (Eq, Generic, Show)
 
  |]
