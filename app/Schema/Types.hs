@@ -11,22 +11,22 @@ import           Data.Text                      ( Text )
 declareClassy [d|
   data Create t
       = Create
-        { createT :: t
-        , createLastUpdated :: UTCTime
+        { createLastUpdated :: UTCTime
         , createCreatedAt :: UTCTime
+        , createT :: t
         }
 
   data Update t
       = Update
-        { updateT :: t
-        , updateLastUpdated :: UTCTime
+        { updateLastUpdated :: UTCTime
+        , updateT :: t
         }
 
   data Timestamped t
       = Timestamped
-        { timestampedT
-        , timestampedCreatedAt :: UTCTime
+        { timestampedCreatedAt :: UTCTime
         , timestamptedLastUpdated :: UTCTime
+        , timestampedT :: t
         }
 
   data User

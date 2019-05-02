@@ -34,12 +34,12 @@ createAccessToken (User uuid _ _ _) = do
 
 
 updateIO :: forall a . a -> IO (Update a)
-updateIO a = Update a <$> getCurrentTime
+updateIO a = Update <<< getCurrentTime <$> a
 
 createIO :: forall a . a -> IO (Create a)
 createIO a = do
   now <- getCurrentTime
-  pure $ Create a now now
+  pure $ Create now now a
 
 
 updatedJournalEntry :: UserId -> UpdateJournalEntry -> IO (Update Journal)

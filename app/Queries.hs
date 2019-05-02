@@ -2,14 +2,11 @@ module Queries where
 
 import Prelude
 import           Control.Lens
-import Control.Arrow
-import Schema
 import Data.ByteString (ByteString)
 import Data.String.QQ
 import Hasql.Statement
 import qualified Hasql.Encoders as HE
 import qualified Hasql.Decoders as HD
-import           Data.Text                      ( Text )
 import Types
 import Schema.Types
 
@@ -28,20 +25,25 @@ findUserByUsername = Statement sqlS encoder decoder True
                 FROM
                     "users"
                 WHERE
-                    "userUsername"=$1 |]
+                    "userUsername"=$1 
+            |]
         encoder = HE.param usernameValue
-        decoder = 
-            HD.rowMaybe
-            $ User
+
+        userDecoder :: HD.Row User
+        userDecoder =
+            User
             <$> HD.column HD.uuid
             <*> HD.column HD.text
             <*> HD.column HD.text
             <*> HD.column HD.text
-            <*> HD.column HD.timestamptz
-            <*> HD.column HD.timestamptz
 
+        decoder :: HD.Result (Maybe (Timestamped User))
+        decoder = HD.rowMaybe $
+            Timestamped <$> HD.column HD.timestamptz <*> HD.column HD.timestamptz <*> userDecoder
+
+   
 usernameValue :: HE.Value Username
-usernameValue = contramap (^. _usernameText) HE.text
+usernameValue = contramap (^. usernameText) HE.text
 
 insertUser :: Statement (Create User) ()
 insertUser = Statement sqlS encoder decoder True
