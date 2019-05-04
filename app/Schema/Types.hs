@@ -1,11 +1,16 @@
 {-# LANGUAGE FunctionalDependencies #-}
 module Schema.Types where
 
+import           Protolude                      ( Eq
+                                                , Show
+                                                )
 import           Control.Lens.TH                ( declareClassy )
 import           Data.Time.Clock                ( UTCTime )
-import Types
+import           Types
 
 
+-- This module represents types as they are written to and drawn from the DB
+-- They should not be the same types that are permitted at the transport layer
 
 declareClassy [d|
   data Create t
@@ -14,12 +19,14 @@ declareClassy [d|
         , createCreatedAt :: UTCTime
         , createT :: t
         }
+        deriving (Eq, Show)
 
   data Update t
       = Update
         { updateLastUpdated :: UTCTime
         , updateT :: t
         }
+        deriving (Eq, Show)
 
   data Timestamped t
       = Timestamped
@@ -27,6 +34,7 @@ declareClassy [d|
         , timestamptedLastUpdated :: UTCTime
         , timestampedT :: t
         }
+        deriving (Eq, Show)
 
   data User
     = User
@@ -35,6 +43,7 @@ declareClassy [d|
       , userHashedPassword :: HashedPassword
       , userPublicKey :: PublicKey
       }
+      deriving (Eq, Show)
 
   data Journal
     = Journal
@@ -43,5 +52,6 @@ declareClassy [d|
       , journalTitleContent :: TitleCiphertext
       , journalContent :: BodyCiphertext
       }
+      deriving (Eq, Show)
 
   |]

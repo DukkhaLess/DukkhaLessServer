@@ -12,6 +12,7 @@ import           Protolude                      ( Eq
 import           Control.Lens.Combinators
 import           Data.ByteString                ( ByteString )
 import           Data.Aeson
+import           Data.UUID                      ( UUID )
 import           Data.Aeson.Types               ( typeMismatch )
 import           Data.Time.Clock                ( UTCTime )
 import           Control.Concurrent.STM         ( TVar )
@@ -67,21 +68,15 @@ declareClassy [d|
     }
     deriving (Eq, Show, Generic)
 
-  data User = User
-    { userUuid :: UserId
-    , userUsername :: Username
-    , userHashedPassword :: HashedPassword
-    , userPublicKey :: PublicKey
-    , userLastUpdated :: LastUpdated
-    , userCreatedAt :: CreatedAt 
-    }
-    deriving (Eq, Show, Generic)
-
   newtype SigningKey = SigningKey { signingKeyByteString :: ByteString }
     deriving (Eq, Show)
 
   newtype SessionToken = SessionToken { sessionTokenBase64Content :: Base64Content }
     deriving (Eq, Show, Generic)
+
+  newtype TokenId = TokenId { tokenIdUUID :: UUID }
+    deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
 
   |]
 

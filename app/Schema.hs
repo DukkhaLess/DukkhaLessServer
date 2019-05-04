@@ -1,4 +1,8 @@
-module Schema where
+module Schema
+      ( module Schema.Types
+      , runMigrations
+      , MigrationFailureReason(..)
+      ) where
 
 import           Protolude
 import           Conf                           ( MigrationsPath(..) )
@@ -7,6 +11,7 @@ import           Data.Bifunctor                 ( first )
 import           Hasql.Migration
 import           Hasql.Pool
 import           Hasql.Transaction.Sessions
+import           Schema.Types
 
 
 data MigrationFailureReason
@@ -26,4 +31,19 @@ runMigrations (MigrationsPath p) pool = do
         executableQueries
   result <- runExceptT $ sequence queries
   pure $ map (const ()) result
+
+create :: forall m a. MonadIO m => a -> m (Create a)
+create a = do
+  now <- lift $ getCurrentTime
+  pure $ Created now now a
+
+update :: forall m a. MonadIO m => a -> m (Update a)
+update a = do
+      now -> lift $ getCurrentTime
+      pure $ Updated now a
+
+timestamped :: forall m a. MonadIO m => a -> m (Timestamped a)
+timestamped a = do
+  now <- lift $ getCurrentTime
+  pure $ Timestamped now now a
 

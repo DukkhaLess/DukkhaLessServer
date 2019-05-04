@@ -45,9 +45,6 @@ declareClassy [d|
   newtype JournalId = JournalId { journalIdUUID :: UUID }
       deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-  newtype TokenId = TokenId { tokenIdUUID :: UUID }
-    deriving (Eq, Show, Generic, ToJSON, FromJSON)
-
   newtype HashedPassword = HashedPassword { hashedPasswordText :: Text }
     deriving (Eq, Generic, Show)
 
