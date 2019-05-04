@@ -7,6 +7,7 @@ import           Protolude                      ( Eq
 
 import           Data.UUID                      ( UUID )
 import           Control.Lens
+import           Data.ByteString                ( ByteString )
 import           Data.Aeson
 import           Data.Text                      ( Text )
 import           Data.Time.Clock                ( UTCTime )
@@ -47,5 +48,10 @@ declareClassy [d|
 
   newtype HashedPassword = HashedPassword { hashedPasswordText :: Text }
     deriving (Eq, Generic, Show)
+
+  newtype SigningKey = SigningKey { signingKeyByteString :: ByteString }
+    deriving (Eq, Show)
+
+  newtype PasswordSalt = PasswordSalt { passwordSaltByteString :: ByteString }
 
  |]

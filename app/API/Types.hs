@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Domain.Types where
+module API.Types where
 
 import           Protolude                      ( Eq
                                                 , Show
@@ -10,7 +10,6 @@ import           Protolude                      ( Eq
                                                 , (<>)
                                                 )
 import           Control.Lens.Combinators
-import           Data.ByteString                ( ByteString )
 import           Data.Aeson
 import           Data.UUID                      ( UUID )
 import           Data.Aeson.Types               ( typeMismatch )
@@ -31,9 +30,6 @@ declareClassy [d|
 
   data LoginUser = LoginUser { loginUserUsername :: Username, loginUserRawPassword :: RawPassword }
     deriving (Eq, Show, Generic)
-
-
-  newtype PasswordSalt = PasswordSalt { passwordSaltByteString :: ByteString }
 
   data JournalEntry = JournalEntry
     { journalEntryJournalId :: JournalId
@@ -67,9 +63,6 @@ declareClassy [d|
     , accessTokenExpiry :: Expiry
     }
     deriving (Eq, Show, Generic)
-
-  newtype SigningKey = SigningKey { signingKeyByteString :: ByteString }
-    deriving (Eq, Show)
 
   newtype SessionToken = SessionToken { sessionTokenBase64Content :: Base64Content }
     deriving (Eq, Show, Generic)

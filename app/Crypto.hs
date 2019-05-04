@@ -6,7 +6,6 @@ import           Protolude                      ( ($)
                                                 , fmap
                                                 , (.)
                                                 )
-import           Data.ByteString                ( ByteString )
 import           Data.ByteString.Lazy           ( toStrict )
 import           Data.Aeson                     ( ToJSON
                                                 , encode
@@ -27,16 +26,17 @@ import           Crypto.Argon2                  ( verifyEncoded
                                                 , defaultHashOptions
                                                 , Argon2Status
                                                 )
-import           Types                          ( RawPassword(..)
+import           Types                          ( SigningKey(..)
+                                                , RawPassword(..)
                                                 , HashedPassword(..)
                                                 , Base64Content(..)
+                                                , PasswordSalt(..)
                                                 )
-import           Domain.Types                   ( SigningKey(..)
-                                                , SessionToken(..)
+import           API.Types                      (SessionToken(..)
                                                 )
 
-hashPassword :: ByteString -> RawPassword -> Either Argon2Status HashedPassword
-hashPassword salt (RawPassword pass) =
+hashPassword :: PasswordSalt -> RawPassword -> Either Argon2Status HashedPassword
+hashPassword (PasswordSalt salt) (RawPassword pass) =
   fmap HashedPassword
     $   toText
     <$> hashEncoded defaultHashOptions (encodeUtf8 pass) salt

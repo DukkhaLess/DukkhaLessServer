@@ -31,7 +31,6 @@ import           Data.Text.Lazy                 ( toLower
 import           Data.ByteString                ( ByteString )
 import           Hasql.Connection              as HC
 import           Hasql.Pool                    as HP
-import qualified Domain.Types                  as T
 import           Network.Wai.Middleware.RequestLogger
                                                 ( logStdout
                                                 , logStdoutDev
@@ -39,6 +38,7 @@ import           Network.Wai.Middleware.RequestLogger
 import           Network.Wai                    ( Middleware )
 import qualified Data.Configurator             as C
 import qualified Data.Configurator.Types       as C
+import qualified Types as T
 
 data Environment
   = Development

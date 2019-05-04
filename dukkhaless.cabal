@@ -18,7 +18,7 @@ library
                      , Schema.Types
                      , Crypto
                      , Domain
-                     , Domain.Types
+                     , API.Types
                      , Queries
                      , Queries.Encoders
                      , Queries.Decoders

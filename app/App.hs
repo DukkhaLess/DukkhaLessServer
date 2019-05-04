@@ -59,7 +59,7 @@ import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
-import           Domain.Types
+import           API.Types
 import           Types
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
