@@ -9,6 +9,8 @@ import qualified Hasql.Encoders as HE
 import qualified Hasql.Decoders as HD
 import Types
 import Schema.Types
+import Queries.Encoders
+import Queries.Decoders
 
 findUserByUsername :: Statement Username (Maybe (Timestamped User))
 findUserByUsername = Statement sqlS encoder decoder True

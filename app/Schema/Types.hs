@@ -2,9 +2,8 @@
 module Schema.Types where
 
 import           Control.Lens.TH                ( declareClassy )
-import           Data.UUID.Types                ( UUID )
-import           Data.Time.Clock                ( UTCTime(..) )
-import           Data.Text                      ( Text )
+import           Data.Time.Clock                ( UTCTime )
+import Types
 
 
 
@@ -31,18 +30,18 @@ declareClassy [d|
 
   data User
     = User
-      { userUuid :: UUID
-      , userUsername :: Text
-      , userHashedPassword :: Text
-      , userPublicKey :: Text
+      { userUuid :: UserId
+      , userUsername :: Username
+      , userHashedPassword :: HashedPassword
+      , userPublicKey :: PublicKey
       }
 
   data Journal
     = Journal
-      { journalUuid :: UUID
-      , journalUserUuid :: UUID
-      , journalTitleContent :: Text
-      , journalContent :: Text
+      { journalUuid :: JournalId
+      , journalUserUuid :: UserId
+      , journalTitleContent :: TitleCiphertext
+      , journalContent :: BodyCiphertext
       }
 
   |]
