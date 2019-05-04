@@ -22,7 +22,9 @@ import           Protolude                      ( IO
                                                 , MonadIO
                                                 , putStrLn
                                                 , (<>)
+                                                , Generic
                                                 )
+import           Control.Concurrent.STM         ( TVar )
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
@@ -59,8 +61,8 @@ import           Network.Wai.Middleware.Gzip    ( gzip )
 import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
-import           API.Types
-import           Types
+import qualified API.Types                     as API
+import qualified Types                         as T
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
 import qualified Data.Configurator             as C
@@ -146,25 +148,25 @@ app' pool logger = do
   middleware $ gzip def
   let runStatement' = runStatement pool
   post "/login" $ do
-    loginUserReq <- jsonData :: ActionT' LoginUser
-    desiredUser  <- runStatement' (loginUserReq ^. loginUserUsername)
+    loginUserReq <- jsonData :: ActionT' API.LoginUser
+    desiredUser  <- runStatement' (loginUserReq ^. API.loginUserUsername)
                                   Q.findUserByUsername
     case desiredUser of
-      Right (Just user) -> do
-        let correctPassword  = HashedPassword $ userHashedPassword user
-        let providedPassword = loginUserReq ^. loginUserRawPassword
+      Right (Just (Schema.Timestamped _ _ user)) -> do
+        let correctPassword  = user ^. Schema.userHashedPassword
+        let providedPassword = loginUserReq ^. API.loginUserRawPassword
         let passwordVerificationResult =
               verifyPassword correctPassword providedPassword
         case passwordVerificationResult of
-          Argon2.Argon2Ok -> respondWithAuthToken user
+          Argon2.Argon2Ok -> respondWithAuthToken (user ^. Schema.userUserId)
           _               -> status status400
       _ -> status status400
 
   post "/register" $ do
-    registerUserReq <- jsonData :: ActionT' RegisterUser
+    registerUserReq <- jsonData :: ActionT' API.RegisterUser
     salt            <- nextBytes 16
     user            <-
-      newUser registerUserReq (PasswordSalt salt)
+      newUser registerUserReq (T.PasswordSalt salt)
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
@@ -173,9 +175,9 @@ app' pool logger = do
       Left err -> do
         putStrLn (show err :: ByteString)
         status status400
-      Right _ -> respondWithAuthToken user
+      Right _ -> respondWithAuthToken (user ^. Schema.createT . Schema.userUserId)
 
-respondWithAuthToken :: UserId-> ActionT' ()
+respondWithAuthToken :: T.UserId -> ActionT' ()
 respondWithAuthToken userId = do
   token           <- liftIO $ createAccessToken userId
   tokenSigningKey <- webM (asks _appStateSigningKey)
@@ -192,3 +194,11 @@ nextBytes byteCount = do
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
 removeApiPrefix paq                     _ = paq
+
+data AppState = AppState
+  { _appStateCryptoRandomGen :: TVar (GenAutoReseed HashDRBG HashDRBG)
+  , _appStateSigningKey :: T.SigningKey
+  }
+  deriving (Generic)
+makeClassy ''AppState
+

@@ -14,10 +14,6 @@ import           Data.Aeson
 import           Data.UUID                      ( UUID )
 import           Data.Aeson.Types               ( typeMismatch )
 import           Data.Time.Clock                ( UTCTime )
-import           Control.Concurrent.STM         ( TVar )
-import           Crypto.Random.DRBG             ( HashDRBG
-                                                , GenAutoReseed
-                                                )
 import           Types
 
 declareClassy [d|
@@ -72,14 +68,6 @@ declareClassy [d|
 
 
   |]
-
-data AppState = AppState
-  { _appStateCryptoRandomGen :: TVar (GenAutoReseed HashDRBG HashDRBG)
-  , _appStateSigningKey :: SigningKey
-  }
-  deriving (Generic)
-makeClassy ''AppState
-
 
 instance FromJSON RegisterUser where
   parseJSON = withObject "loginUser" $ \o ->
