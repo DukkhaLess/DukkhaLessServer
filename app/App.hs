@@ -15,7 +15,6 @@ import           Protolude                      ( IO
                                                 , pure
                                                 , liftIO
                                                 , const
-                                                , Int
                                                 , Maybe(..)
                                                 , Either(..)
                                                 , show
@@ -31,9 +30,9 @@ import           Control.Monad.Trans.Except     ( ExceptT(..)
                                                 , runExceptT
                                                 )
 import           Control.Monad.Trans            ( lift )
-import           Crypto.Classes.Exceptions      ( genBytes )
 import           Crypto                         ( signJwt
                                                 , verifyPassword
+                                                , nextBytes
                                                 )
 import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
@@ -43,11 +42,7 @@ import           Data.String                    ( String )
 import           Domain                         ( newUser
                                                 , createAccessToken
                                                 )
-import           Control.Concurrent.STM         ( atomically
-                                                , readTVarIO
-                                                , modifyTVar'
-                                                , newTVarIO
-                                                )
+import           Control.Concurrent.STM         ( newTVarIO )
 import qualified Hasql.Session                 as Session
 import qualified Hasql.Statement               as Statement
 import           Hasql.Pool                    as HP
@@ -175,19 +170,6 @@ respondWithAuthToken userId = do
   tokenSigningKey <- webM $ asks (^. T.signingKey)
   either (const (status status500)) json (signJwt tokenSigningKey token)
 
-nextBytes
-  :: MonadReader r m
-  => MonadIO m
-  => T.HasCryptoStore r T.CryptoStore
-  => Monad m
-  => Int
-  -> m ByteString
-nextBytes byteCount = do
-  tVar       <- asks (^. T.cryptoStore)
-  currentGen <- liftIO $ readTVarIO tVar
-  let (salt, nextGen) = genBytes byteCount currentGen
-  liftIO $ atomically $ modifyTVar' tVar (const nextGen)
-  pure salt
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
