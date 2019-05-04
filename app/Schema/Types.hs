@@ -5,7 +5,6 @@ import           Protolude                      ( Eq
                                                 , Show
                                                 )
 import           Control.Lens.TH                ( declareClassy )
-import           Data.Time.Clock                ( UTCTime )
 import           Types
 
 
@@ -15,30 +14,30 @@ import           Types
 declareClassy [d|
   data Create t
       = Create
-        { createLastUpdated :: UTCTime
-        , createCreatedAt :: UTCTime
+        { createLastUpdated :: LastUpdated
+        , createCreatedAt :: CreatedAt
         , createT :: t
         }
         deriving (Eq, Show)
 
   data Update t
       = Update
-        { updateLastUpdated :: UTCTime
+        { updateLastUpdated :: LastUpdated
         , updateT :: t
         }
         deriving (Eq, Show)
 
   data Timestamped t
       = Timestamped
-        { timestampedCreatedAt :: UTCTime
-        , timestamptedLastUpdated :: UTCTime
+        { timestampedCreatedAt :: CreatedAt
+        , timestamptedLastUpdated :: LastUpdated
         , timestampedT :: t
         }
         deriving (Eq, Show)
 
   data User
     = User
-      { userUuid :: UserId
+      { userUserId :: UserId
       , userUsername :: Username
       , userHashedPassword :: HashedPassword
       , userPublicKey :: PublicKey
@@ -47,8 +46,8 @@ declareClassy [d|
 
   data Journal
     = Journal
-      { journalUuid :: JournalId
-      , journalUserUuid :: UserId
+      { journalJournalId :: JournalId
+      , journalUserId :: UserId
       , journalTitleContent :: TitleCiphertext
       , journalContent :: BodyCiphertext
       }

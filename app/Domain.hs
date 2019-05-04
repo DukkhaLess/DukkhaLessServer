@@ -11,14 +11,13 @@ import           Data.Time.Clock                ( getCurrentTime
 import           Data.Time.Calendar             ( addDays )
 import           System.Random                  ( randomIO )
 import           Crypto.Argon2                  ( Argon2Status )
-import qualified Schema.Types as Schema
+import qualified Schema as Schema
 
-newUser :: RegisterUser -> PasswordSalt -> ExceptT Argon2Status IO (Schema.Created User)
+newUser :: RegisterUser -> PasswordSalt -> ExceptT Argon2Status IO (Schema.Create Schema.User)
 newUser (RegisterUser name rawPass pubKey) (PasswordSalt salt) = do
   uuid       <- lift (randomIO :: IO UUID)
   hashedPass <- ExceptT $ pure $ hashPassword salt rawPass
-  now <- lift $ getCurrentTime
-  create $ User
+  Schema.createIO $ Schema.User
     (UserId uuid)
     name
     hashedPass
