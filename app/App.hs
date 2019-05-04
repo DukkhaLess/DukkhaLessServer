@@ -117,9 +117,8 @@ webM = lift
 generateInitialAppState :: Conf.Config -> ExceptT GenError IO T.AppState
 generateInitialAppState conf = do
   initialEntropy <- lift $ getEntropy 256
-  gen            <- ExceptT $ return
-    (newGenAutoReseed initialEntropy (2 ^ 48))
-  genVar <- lift $ newTVarIO gen
+  gen            <- ExceptT $ return (newGenAutoReseed initialEntropy (2 ^ 48))
+  genVar         <- lift $ newTVarIO gen
   return $ T.AppState genVar (Conf.signingKey conf)
 
 type ActionT' = ActionT LT.Text WebM
@@ -141,12 +140,12 @@ app' pool logger = do
   let runStatement' = runStatement pool
   post "/login" $ do
     loginUserReq <- jsonData :: ActionT' API.LoginUser
-    desiredUser  <- runStatement' (loginUserReq ^. API.loginUserUsername)
+    desiredUser  <- runStatement' (loginUserReq ^. API.username)
                                   Q.findUserByUsername
     case desiredUser of
       Right (Just (Schema.Timestamped _ _ user)) -> do
         let correctPassword  = user ^. Schema.userHashedPassword
-        let providedPassword = loginUserReq ^. API.loginUserRawPassword
+        let providedPassword = loginUserReq ^. API.rawPassword
         let passwordVerificationResult =
               verifyPassword correctPassword providedPassword
         case passwordVerificationResult of
@@ -173,12 +172,19 @@ app' pool logger = do
 respondWithAuthToken :: T.UserId -> ActionT' ()
 respondWithAuthToken userId = do
   token           <- liftIO $ createAccessToken userId
-  tokenSigningKey <- webM $ asks (^. T.appStateSigningKey)
+  tokenSigningKey <- webM $ asks (^. T.signingKey)
   either (const (status status500)) json (signJwt tokenSigningKey token)
 
-nextBytes :: Int -> ActionT' ByteString
+nextBytes
+  :: MonadTrans t
+  => MonadReader r m
+  => MonadIO (t m)
+  => T.HasCryptoStore r T.CryptoStore
+  => Monad (t m)
+  => Int
+  -> t m ByteString
 nextBytes byteCount = do
-  tVar       <- webM $ asks (^. T.appStateCryptoRandomGen)
+  tVar       <- lift $ asks (^. T.cryptoStore)
   currentGen <- liftIO $ readTVarIO tVar
   let (salt, nextGen) = genBytes byteCount currentGen
   liftIO $ atomically $ modifyTVar' tVar (const nextGen)
