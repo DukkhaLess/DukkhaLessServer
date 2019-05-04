@@ -155,7 +155,7 @@ app' pool logger = do
 
   post "/register" $ do
     registerUserReq <- jsonData :: ActionT' API.RegisterUser
-    salt            <- nextBytes 16
+    salt            <- lift $ nextBytes 16
     user            <-
       newUser registerUserReq (T.PasswordSalt salt)
       &   runExceptT
@@ -176,15 +176,14 @@ respondWithAuthToken userId = do
   either (const (status status500)) json (signJwt tokenSigningKey token)
 
 nextBytes
-  :: MonadTrans t
-  => MonadReader r m
-  => MonadIO (t m)
+  :: MonadReader r m
+  => MonadIO m
   => T.HasCryptoStore r T.CryptoStore
-  => Monad (t m)
+  => Monad m
   => Int
-  -> t m ByteString
+  -> m ByteString
 nextBytes byteCount = do
-  tVar       <- lift $ asks (^. T.cryptoStore)
+  tVar       <- asks (^. T.cryptoStore)
   currentGen <- liftIO $ readTVarIO tVar
   let (salt, nextGen) = genBytes byteCount currentGen
   liftIO $ atomically $ modifyTVar' tVar (const nextGen)
