@@ -1,6 +1,6 @@
 FROM haskell:8.6.3 as build
 WORKDIR /opt/build
-RUN cabal update
+RUN cabal new-update
 RUN apt-get update && apt-get install -y \
   libpq-dev
 COPY src /opt/build/src
