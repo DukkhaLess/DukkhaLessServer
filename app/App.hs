@@ -22,9 +22,7 @@ import           Protolude                      ( IO
                                                 , MonadIO
                                                 , putStrLn
                                                 , (<>)
-                                                , Generic
                                                 )
-import           Control.Concurrent.STM         ( TVar )
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
@@ -68,10 +66,7 @@ import           Conf                           ( Environment(..) )
 import qualified Data.Configurator             as C
 import qualified Schema                        as Schema
 import           System.Entropy                 ( getEntropy )
-import           Crypto.Random.DRBG             ( HashDRBG
-                                                , GenAutoReseed
-                                                , newGenAutoReseed
-                                                )
+import           Crypto.Random.DRBG             ( newGenAutoReseed )
 import qualified Data.Text.Lazy                as LT
 import           Crypto.Random                  ( GenError )
 import qualified Queries                       as Q
@@ -113,22 +108,19 @@ app env = void $ runMaybeT $ do
 {- A MonadTrans-like Monad for our application.
   Its kind is too refined however to allow this to have a MonadTrans instance
 -}
-newtype WebM a = WebM { runWebM :: ReaderT AppState IO a }
-  deriving (Applicative, Functor, Monad, MonadIO, MonadReader AppState)
+newtype WebM a = WebM { runWebM :: ReaderT T.AppState IO a }
+  deriving (Applicative, Functor, Monad, MonadIO, MonadReader T.AppState)
 
 webM :: MonadTrans t => WebM a -> t WebM a
 webM = lift
 
-generateInitialAppState :: Conf.Config -> ExceptT GenError IO AppState
+generateInitialAppState :: Conf.Config -> ExceptT GenError IO T.AppState
 generateInitialAppState conf = do
   initialEntropy <- lift $ getEntropy 256
   gen            <- ExceptT $ return
-    (newGenAutoReseed initialEntropy (2 ^ 48) :: Either
-        GenError
-        (GenAutoReseed HashDRBG HashDRBG)
-    )
+    (newGenAutoReseed initialEntropy (2 ^ 48))
   genVar <- lift $ newTVarIO gen
-  return $ AppState genVar (Conf.signingKey conf)
+  return $ T.AppState genVar (Conf.signingKey conf)
 
 type ActionT' = ActionT LT.Text WebM
 
@@ -175,17 +167,18 @@ app' pool logger = do
       Left err -> do
         putStrLn (show err :: ByteString)
         status status400
-      Right _ -> respondWithAuthToken (user ^. Schema.createT . Schema.userUserId)
+      Right _ ->
+        respondWithAuthToken (user ^. Schema.createT . Schema.userUserId)
 
 respondWithAuthToken :: T.UserId -> ActionT' ()
 respondWithAuthToken userId = do
   token           <- liftIO $ createAccessToken userId
-  tokenSigningKey <- webM (asks _appStateSigningKey)
+  tokenSigningKey <- webM $ asks (^. T.appStateSigningKey)
   either (const (status status500)) json (signJwt tokenSigningKey token)
 
 nextBytes :: Int -> ActionT' ByteString
 nextBytes byteCount = do
-  tVar <- webM $ asks _appStateCryptoRandomGen
+  tVar       <- webM $ asks (^. T.appStateCryptoRandomGen)
   currentGen <- liftIO $ readTVarIO tVar
   let (salt, nextGen) = genBytes byteCount currentGen
   liftIO $ atomically $ modifyTVar' tVar (const nextGen)
@@ -194,11 +187,3 @@ nextBytes byteCount = do
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
 removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
 removeApiPrefix paq                     _ = paq
-
-data AppState = AppState
-  { _appStateCryptoRandomGen :: TVar (GenAutoReseed HashDRBG HashDRBG)
-  , _appStateSigningKey :: T.SigningKey
-  }
-  deriving (Generic)
-makeClassy ''AppState
-

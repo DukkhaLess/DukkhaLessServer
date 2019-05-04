@@ -11,6 +11,10 @@ import           Data.ByteString                ( ByteString )
 import           Data.Aeson
 import           Data.Text                      ( Text )
 import           Data.Time.Clock                ( UTCTime )
+import           Control.Concurrent.STM         ( TVar )
+import           Crypto.Random.DRBG             ( HashDRBG
+                                                , GenAutoReseed
+                                                )
 
 declareClassy [d|
   newtype Username = Username { usernameText :: Text }
@@ -54,4 +58,9 @@ declareClassy [d|
 
   newtype PasswordSalt = PasswordSalt { passwordSaltByteString :: ByteString }
 
+  data AppState = AppState
+    { appStateCryptoRandomGen :: TVar (GenAutoReseed HashDRBG HashDRBG)
+    , appStateSigningKey :: SigningKey
+    }
+    deriving (Generic)
  |]
