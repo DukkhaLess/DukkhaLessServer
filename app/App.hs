@@ -5,7 +5,6 @@ import           Protolude                      ( IO
                                                 , ($)
                                                 , (.)
                                                 , (>>=)
-                                                , ($>)
                                                 , Applicative
                                                 , either
                                                 , (&)
@@ -17,7 +16,6 @@ import           Protolude                      ( IO
                                                 , show
                                                 , MonadIO
                                                 , putStrLn
-                                                , (<>)
                                                 )
 import           App.Middleware
 import qualified Control.Exception             as E
@@ -29,7 +27,6 @@ import           Control.Monad.Trans            ( lift )
 import qualified Crypto                        as Crypto
 import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
-import           Data.Text.Lazy                 ( unpack )
 import           Data.ByteString                ( ByteString )
 import           Data.String                    ( String )
 import           Domain                         ( newUser
@@ -45,7 +42,6 @@ import qualified API.Types                     as API
 import qualified Types                         as T
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
-import qualified Data.Configurator             as C
 import qualified Schema                        as Schema
 import qualified Data.Text.Lazy                as LT
 import qualified Queries                       as Q
@@ -53,18 +49,7 @@ import           Util                           ( foldMapA )
 
 app :: Conf.Environment -> IO ()
 app env = void $ runMaybeT $ do
-  putStrLn
-    ("Loading application config with environment: " <> (show env) :: String)
-  conf <- MaybeT $ do
-    loaded <- C.load [C.Required $ unpack $ Conf.confFileName env]
-    putStrLn ("Loading config file" :: String)
-    parsed <- Conf.makeConfig loaded
-    case parsed of
-      Just _ -> do
-        putStrLn ("Parsed config file" :: String)
-        pure parsed
-      Nothing ->
-        putStrLn ("Parsed config file, but found nothing" :: String) $> Nothing
+  conf <- Conf.buildConfig env
   putStrLn ("Acquiring database connection pool" :: String)
   lift $ E.bracket
     ( HP.acquire

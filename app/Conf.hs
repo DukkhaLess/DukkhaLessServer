@@ -19,7 +19,14 @@ import           Protolude                      ( show
                                                 , Int
                                                 , Integer
                                                 , fromInteger
+                                                , putStrLn
+                                                , Maybe(..)
+                                                , pure
+                                                , (<>)
+                                                , ($>)
                                                 )
+import           Data.String                    ( String )
+import           Data.Text.Lazy                 ( unpack )
 import           Data.Word                      ( Word16 )
 import           Control.Monad.Trans.Maybe      ( MaybeT(..)
                                                 , runMaybeT
@@ -38,7 +45,7 @@ import           Network.Wai.Middleware.RequestLogger
 import           Network.Wai                    ( Middleware )
 import qualified Data.Configurator             as C
 import qualified Data.Configurator.Types       as C
-import qualified Types as T
+import qualified Types                         as T
 
 data Environment
   = Development
@@ -129,3 +136,19 @@ connectInfo dbConf getUser =
                                    (username user)
                                    (password user)
                                    (schema user)
+
+
+buildConfig :: Conf.Environment -> MaybeT IO Conf.Config
+buildConfig env = do
+  putStrLn
+    ("Loading application config with environment: " <> (show env) :: String)
+  MaybeT $ do
+    loaded <- C.load [C.Required $ unpack $ Conf.confFileName env]
+    putStrLn ("Loading config file" :: String)
+    parsed <- Conf.makeConfig loaded
+    case parsed of
+      Just _ -> do
+        putStrLn ("Parsed config file" :: String)
+        pure parsed
+      Nothing ->
+        putStrLn ("Parsed config file, but found nothing" :: String) $> Nothing

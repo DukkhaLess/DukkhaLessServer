@@ -13,6 +13,7 @@ import           Protolude                      ( ($)
                                                 , (^)
                                                 , either
                                                 , Word64
+                                                , show
                                                 )
 import           Control.Concurrent.STM         ( atomically
                                                 , readTVarIO
@@ -20,7 +21,6 @@ import           Control.Concurrent.STM         ( atomically
                                                 , newTVarIO
                                                 )
 import           Crypto.Classes.Exceptions      ( genBytes )
-import qualified Control.Exception             as E
 import           Control.Monad.Trans.Except     ( ExceptT(..)
                                                 , runExceptT 
                                                 )
@@ -92,5 +92,5 @@ createGen = do
 createStoreOrFail :: IO T.CryptoStore
 createStoreOrFail = do
   eitherGen <- runExceptT createGen
-  gen   <- either E.throwIO return eitherGen
+  gen   <- either (fail . show) return eitherGen
   newTVarIO gen
