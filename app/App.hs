@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-type-defaults #-}
 module App where
 
 import           Protolude                      ( IO
