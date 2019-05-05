@@ -57,16 +57,17 @@ app env = void $ runMaybeT $ do
     )
     HP.release
     (\conn -> do
-      putStrLn ("Connection pool acquired, preparing initial state" :: String)
+      putStrLn ("Connection pool acquired, running migrations" :: String)
       migrationResult <- Schema.runMigrations
         (Conf.migrationsPath $ Conf.databaseConfig conf)
         conn
       _     <- either (fail . show) pure migrationResult
+      putStrLn ("Migrations complete. Preparing initial app state" :: String)
       store <- Crypto.createStoreOrFail
       let initialAppState = T.AppState store (Conf.signingKey conf) conn
       putStrLn ("Initial state established, starting scotty app" :: String)
-      let logger = Conf.logger env
       let runActionToIO m = runReaderT (runWebM m) initialAppState
+      let logger = Conf.logger env
       scottyT 4000 runActionToIO $ app' [logger]
     )
 
