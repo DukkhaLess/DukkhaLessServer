@@ -49,6 +49,7 @@ import qualified Data.Configurator             as C
 import qualified Schema                        as Schema
 import qualified Data.Text.Lazy                as LT
 import qualified Queries                       as Q
+import           Util                           ( foldMapA )
 
 app :: Conf.Environment -> IO ()
 app env = void $ runMaybeT $ do
@@ -81,7 +82,7 @@ app env = void $ runMaybeT $ do
       putStrLn ("Initial state established, starting scotty app" :: String)
       let logger = Conf.logger env
       let runActionToIO m = runReaderT (runWebM m) initialAppState
-      scottyT 4000 runActionToIO $ app' logger
+      scottyT 4000 runActionToIO $ app' [logger]
     )
 
 {- A MonadTrans-like Monad for our application.
@@ -95,15 +96,15 @@ webM = lift
 
 type ActionT' = ActionT LT.Text WebM
 
-app' :: Middleware -> ScottyT LT.Text WebM ()
-app' logger = do
+app' :: [Middleware] -> ScottyT LT.Text WebM ()
+app' additionalMiddleware = do
   middleware removePrefixMiddleware
-  middleware logger
+  foldMapA middleware additionalMiddleware
   middleware $ gzip def
   post "/login" $ do
     loginUserReq <- jsonData :: ActionT' API.LoginUser
-    desiredUser  <- lift $ Schema.runStatement (loginUserReq ^. API.username)
-                                        Q.findUserByUsername
+    desiredUser  <- lift
+      $ Schema.runStatement (loginUserReq ^. API.username) Q.findUserByUsername
     case desiredUser of
       Right (Just (Schema.Timestamped _ _ user)) -> do
         let correctPassword  = user ^. Schema.userHashedPassword
@@ -136,4 +137,3 @@ respondWithAuthToken userId = do
   token           <- liftIO $ createAccessToken userId
   tokenSigningKey <- webM $ asks (^. T.signingKey)
   either (const (status status500)) json (Crypto.signJwt tokenSigningKey token)
-
