@@ -16,6 +16,8 @@ import           Control.Concurrent.STM         ( TVar )
 import           Crypto.Random.DRBG             ( HashDRBG
                                                 , GenAutoReseed
                                                 )
+import           Hasql.Pool                    as HP
+
 newtype Username = Username { usernameText :: Text }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 makeFields ''Username
@@ -72,11 +74,12 @@ makeFields ''SigningKey
 newtype PasswordSalt = PasswordSalt { passwordSaltByteString :: ByteString }
 makeFields ''PasswordSalt
 
-type CryptoStore = TVar (GenAutoReseed HashDRBG HashDRBG)
-
+type CryptoGen = GenAutoReseed HashDRBG HashDRBG
+type CryptoStore = TVar CryptoGen
 data AppState = AppState
   { appStateCryptoStore :: CryptoStore
   , appStateSigningKey :: SigningKey
+  , appStateConnectionPool :: HP.Pool
   }
   deriving (Generic)
 makeFields ''AppState

@@ -7,7 +7,6 @@ import           Protolude                      ( IO
                                                 , (.)
                                                 , (>>=)
                                                 , ($>)
-                                                , (^)
                                                 , Either
                                                 , Applicative
                                                 , either
@@ -26,14 +25,9 @@ import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Maybe      ( MaybeT(..) )
-import           Control.Monad.Trans.Except     ( ExceptT(..)
-                                                , runExceptT
-                                                )
+import           Control.Monad.Trans.Except     ( runExceptT )
 import           Control.Monad.Trans            ( lift )
-import           Crypto                         ( signJwt
-                                                , verifyPassword
-                                                , nextBytes
-                                                )
+import qualified Crypto                        as Crypto
 import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
 import           Data.Text.Lazy                 ( unpack )
@@ -42,7 +36,6 @@ import           Data.String                    ( String )
 import           Domain                         ( newUser
                                                 , createAccessToken
                                                 )
-import           Control.Concurrent.STM         ( newTVarIO )
 import qualified Hasql.Session                 as Session
 import qualified Hasql.Statement               as Statement
 import           Hasql.Pool                    as HP
@@ -60,10 +53,7 @@ import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
 import qualified Data.Configurator             as C
 import qualified Schema                        as Schema
-import           System.Entropy                 ( getEntropy )
-import           Crypto.Random.DRBG             ( newGenAutoReseed )
 import qualified Data.Text.Lazy                as LT
-import           Crypto.Random                  ( GenError )
 import qualified Queries                       as Q
 
 app :: Conf.Environment -> IO ()
@@ -91,9 +81,9 @@ app env = void $ runMaybeT $ do
       migrationResult <- Schema.runMigrations
         (Conf.migrationsPath $ Conf.databaseConfig conf)
         conn
-      _                 <- either (fail . show) pure migrationResult
-      eitherErrAppState <- runExceptT (generateInitialAppState conf)
-      initialAppState   <- either E.throwIO return eitherErrAppState
+      _     <- either (fail . show) pure migrationResult
+      store <- Crypto.createStoreOrFail
+      let initialAppState = T.AppState store (Conf.signingKey conf) conn
       putStrLn ("Initial state established, starting scotty app" :: String)
       let logger = Conf.logger env
       let runActionToIO m = runReaderT (runWebM m) initialAppState
@@ -108,13 +98,6 @@ newtype WebM a = WebM { runWebM :: ReaderT T.AppState IO a }
 
 webM :: MonadTrans t => WebM a -> t WebM a
 webM = lift
-
-generateInitialAppState :: Conf.Config -> ExceptT GenError IO T.AppState
-generateInitialAppState conf = do
-  initialEntropy <- lift $ getEntropy 256
-  gen            <- ExceptT $ return (newGenAutoReseed initialEntropy (2 ^ 48))
-  genVar         <- lift $ newTVarIO gen
-  return $ T.AppState genVar (Conf.signingKey conf)
 
 type ActionT' = ActionT LT.Text WebM
 
@@ -142,7 +125,7 @@ app' pool logger = do
         let correctPassword  = user ^. Schema.userHashedPassword
         let providedPassword = loginUserReq ^. API.rawPassword
         let passwordVerificationResult =
-              verifyPassword correctPassword providedPassword
+              Crypto.verifyPassword correctPassword providedPassword
         case passwordVerificationResult of
           Argon2.Argon2Ok -> respondWithAuthToken (user ^. Schema.userUserId)
           _               -> status status400
@@ -150,7 +133,7 @@ app' pool logger = do
 
   post "/register" $ do
     registerUserReq <- jsonData :: ActionT' API.RegisterUser
-    salt            <- lift $ nextBytes 16
+    salt            <- lift $ Crypto.nextBytes 16
     user            <-
       newUser registerUserReq (T.PasswordSalt salt)
       &   runExceptT
@@ -168,7 +151,7 @@ respondWithAuthToken :: T.UserId -> ActionT' ()
 respondWithAuthToken userId = do
   token           <- liftIO $ createAccessToken userId
   tokenSigningKey <- webM $ asks (^. T.signingKey)
-  either (const (status status500)) json (signJwt tokenSigningKey token)
+  either (const (status status500)) json (Crypto.signJwt tokenSigningKey token)
 
 
 removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries

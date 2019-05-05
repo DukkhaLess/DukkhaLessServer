@@ -9,14 +9,25 @@ import           Protolude                      ( ($)
                                                 , Int
                                                 , pure
                                                 , const
+                                                , IO
+                                                , (^)
+                                                , either
+                                                , Word64
                                                 )
 import           Control.Concurrent.STM         ( atomically
                                                 , readTVarIO
                                                 , modifyTVar'
+                                                , newTVarIO
+                                                )
+import           Crypto.Classes.Exceptions      ( genBytes )
+import qualified Control.Exception             as E
+import           Control.Monad.Trans.Except     ( ExceptT(..)
+                                                , runExceptT 
                                                 )
 import           Control.Monad.Reader
 import           Control.Lens
-import           Crypto.Classes.Exceptions      ( genBytes )
+import           Crypto.Random                  ( GenError )
+import           Crypto.Random.DRBG             ( newGenAutoReseed )
 import           Data.ByteString.Lazy           ( toStrict )
 import           Data.Aeson                     ( ToJSON
                                                 , encode
@@ -31,6 +42,7 @@ import           Jose.Jwt                       ( JwtError
                                                 , unJwt
                                                 )
 import           Jose.Jws                       ( hmacEncode )
+
 import           Data.Text.Encoding             ( encodeUtf8
                                                 , decodeUtf8
                                                 )
@@ -39,6 +51,7 @@ import           Crypto.Argon2                  ( verifyEncoded
                                                 , defaultHashOptions
                                                 , Argon2Status
                                                 )
+import           System.Entropy                 ( getEntropy )
 import qualified Types                          as T
 import qualified API.Types                      as API 
 
@@ -69,3 +82,15 @@ nextBytes byteCount = do
   let (salt, nextGen) = genBytes byteCount currentGen
   liftIO $ atomically $ modifyTVar' tVar (const nextGen)
   pure salt
+
+createGen ::  ExceptT GenError IO T.CryptoGen
+createGen = do
+  initialEntropy <- lift $ getEntropy 256
+  let gen = newGenAutoReseed initialEntropy ((2 :: Word64) ^ (48 :: Word64))
+  ExceptT $ return gen
+
+createStoreOrFail :: IO T.CryptoStore
+createStoreOrFail = do
+  eitherGen <- runExceptT createGen
+  gen   <- either E.throwIO return eitherGen
+  newTVarIO gen
