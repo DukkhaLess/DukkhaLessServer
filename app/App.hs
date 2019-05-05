@@ -7,7 +7,6 @@ import           Protolude                      ( IO
                                                 , (.)
                                                 , (>>=)
                                                 , ($>)
-                                                , Either
                                                 , Applicative
                                                 , either
                                                 , (&)
@@ -36,8 +35,6 @@ import           Data.String                    ( String )
 import           Domain                         ( newUser
                                                 , createAccessToken
                                                 )
-import qualified Hasql.Session                 as Session
-import qualified Hasql.Statement               as Statement
 import           Hasql.Pool                    as HP
 import           Network.Wai                    ( Middleware )
 import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
@@ -87,7 +84,7 @@ app env = void $ runMaybeT $ do
       putStrLn ("Initial state established, starting scotty app" :: String)
       let logger = Conf.logger env
       let runActionToIO m = runReaderT (runWebM m) initialAppState
-      scottyT 4000 runActionToIO $ app' conn logger
+      scottyT 4000 runActionToIO $ app' logger
     )
 
 {- A MonadTrans-like Monad for our application.
@@ -101,25 +98,15 @@ webM = lift
 
 type ActionT' = ActionT LT.Text WebM
 
-runStatement
-  :: MonadIO m
-  => HP.Pool
-  -> a
-  -> Statement.Statement a b
-  -> m (Either HP.UsageError b)
-runStatement pool p statement =
-  liftIO $ HP.use pool (Session.statement p statement)
-
-app' :: HP.Pool -> Middleware -> ScottyT LT.Text WebM ()
-app' pool logger = do
+app' :: Middleware -> ScottyT LT.Text WebM ()
+app' logger = do
   middleware $ rewritePureWithQueries removeApiPrefix
   middleware logger
   middleware $ gzip def
-  let runStatement' = runStatement pool
   post "/login" $ do
     loginUserReq <- jsonData :: ActionT' API.LoginUser
-    desiredUser  <- runStatement' (loginUserReq ^. API.username)
-                                  Q.findUserByUsername
+    desiredUser  <- lift $ Schema.runStatement (loginUserReq ^. API.username)
+                                        Q.findUserByUsername
     case desiredUser of
       Right (Just (Schema.Timestamped _ _ user)) -> do
         let correctPassword  = user ^. Schema.userHashedPassword
@@ -139,7 +126,7 @@ app' pool logger = do
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
-    result <- liftIO $ HP.use pool (Session.statement user Q.insertUser)
+    result <- lift $ Schema.runStatement user Q.insertUser
     case result of
       Left err -> do
         putStrLn (show err :: ByteString)
