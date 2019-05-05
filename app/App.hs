@@ -19,6 +19,7 @@ import           Protolude                      ( IO
                                                 , putStrLn
                                                 , (<>)
                                                 )
+import           App.Middleware
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
@@ -36,11 +37,8 @@ import           Domain                         ( newUser
                                                 )
 import           Hasql.Pool                    as HP
 import           Network.Wai                    ( Middleware )
-import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
-                                                , rewritePureWithQueries
-                                                )
+
 import           Network.Wai.Middleware.Gzip    ( gzip )
-import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
 import qualified API.Types                     as API
@@ -99,7 +97,7 @@ type ActionT' = ActionT LT.Text WebM
 
 app' :: Middleware -> ScottyT LT.Text WebM ()
 app' logger = do
-  middleware $ rewritePureWithQueries removeApiPrefix
+  middleware removePrefixMiddleware
   middleware logger
   middleware $ gzip def
   post "/login" $ do
@@ -139,7 +137,3 @@ respondWithAuthToken userId = do
   tokenSigningKey <- webM $ asks (^. T.signingKey)
   either (const (status status500)) json (Crypto.signJwt tokenSigningKey token)
 
-
-removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
-removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
-removeApiPrefix paq                     _ = paq
