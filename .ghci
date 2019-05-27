@@ -1,0 +1,20 @@
+:set -hide-package cryptonite
+:set -fwarn-unused-binds -fwarn-unused-imports -fprint-potential-instances
+:set -isrc:app
+:set -XNoImplicitPrelude
+:set -XDeriveGeneric
+:set -XFlexibleInstances
+:set -XFlexibleContexts
+:set -XTypeFamilies
+:set -XTypeApplications
+:set -XGADTs
+:set -XStandaloneDeriving
+:set -XTypeSynonymInstances
+:set -XMultiParamTypeClasses
+:set -XGeneralizedNewtypeDeriving
+:set -XOverloadedStrings
+:set -XQuasiQuotes
+:set -XTemplateHaskell
+:set -XExplicitForAll
+
+:load App App.Middleware Conf Crypto Domain Queries Queries.Encoders Queries.Decoders Schema Schema.Types API.Types Types Main
