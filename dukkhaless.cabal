@@ -100,7 +100,7 @@ test-suite dukkhaless-test
   ghc-options:         -Wall -Werror
   default-language:    Haskell2010
   default-extensions:  NoImplicitPrelude
- 
+
 source-repository head
    type: git
    location: https://github.com/DukkhaLess/DukkhaLessServer
