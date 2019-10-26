@@ -1,56 +1,68 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Schema
-  ( module V0001
-  , migrationStep
-  , dukkhalessDb
-  , runMigrations
-  , insertUser
-  , findUserbyUsername
-  )
+      ( module Schema.Types
+      , runMigrations
+      , MigrationFailureReason(..)
+      , createIO
+      , updateIO
+      , runStatement
+      )
 where
 
 import           Protolude
-import           Database.Beam                  ( DatabaseSettings
-                                                , withDatabase
-                                                )
-import           Database.Beam.Migrate.Types    ( CheckedDatabaseSettings
-                                                , MigrationSteps
-                                                , migrationStep
-                                                , evaluateDatabase
-                                                , unCheckDatabase
-                                                )
-import           Database.Beam.Query
-import           Database.Beam.Migrate.Simple   ( bringUpToDate )
-import           Database.Beam.Postgres         ( PgCommandSyntax
-                                                , Connection
-                                                , Pg
-                                                )
-import           Database.Beam.Postgres.Migrate ( migrationBackend )
-import           Schema.V0001            hiding ( migration )
-import qualified Schema.V0001                  as V0001
+import           Conf                           ( MigrationsPath(..) )
+import           Control.Lens
+import           Control.Monad.Trans.Except     ( runExceptT )
+import           Data.Time.Clock                ( getCurrentTime )
+import           Data.Bifunctor                 ( first )
+import           Hasql.Migration
+import qualified Hasql.Pool                    as HP
+import qualified Hasql.Statement               as Statement
+import qualified Hasql.Session                 as Session
+import           Hasql.Transaction.Sessions
+import           Schema.Types
 import qualified Types                         as T
 
-dukkhalessDb :: DatabaseSettings be DukkhalessDb
-dukkhalessDb = unCheckDatabase (evaluateDatabase migrations)
 
-migrations
-  :: MigrationSteps PgCommandSyntax () (CheckedDatabaseSettings be DukkhalessDb)
-migrations = migrationStep "Initial commit" V0001.migration
+data MigrationFailureReason
+  = UsageErrorReason HP.UsageError
+  | MigrationErrorReason MigrationError
+  deriving Show
 
-runMigrations :: Connection -> IO ()
-runMigrations conn =
-  void $ withDatabase conn $ bringUpToDate migrationBackend migrations
+runMigrations
+      :: MigrationsPath -> HP.Pool -> IO (Either MigrationFailureReason ())
+runMigrations (MigrationsPath p) pool = do
+      commands <- loadMigrationsFromDirectory p
+      let transactions = map runMigration (MigrationInitialization : commands)
+      let sessions     = map (transaction Serializable Write) transactions
+      let executableQueries = map
+                (ExceptT . (map (first UsageErrorReason)) . HP.use pool)
+                sessions
+      let
+            queries = map
+                  (maybe (pure ())
+                         (ExceptT . pure . Left . MigrationErrorReason) =<<
+                  )
+                  executableQueries
+      result <- runExceptT $ sequence queries
+      pure $ map (const ()) result
 
-insertUser :: User -> Connection -> IO ()
-insertUser u conn = withDatabase conn cmd
- where
-  cmd :: Pg ()
-  cmd = runInsert $ insert (_dukkalessUsers dukkhalessDb) $ insertValues [u]
+createIO :: forall m a . MonadIO m => a -> m (Create a)
+createIO a = do
+      now <- liftIO $ getCurrentTime
+      pure $ Create (T.LastUpdated now) (T.CreatedAt now) a
 
-findUserbyUsername :: T.Username -> Connection -> IO (Maybe User)
-findUserbyUsername (T.Username name) conn = withDatabase conn cmd
- where
-  cmd :: Pg (Maybe User)
-  cmd = runSelectReturningOne $ select $ filter_
-    (\u -> _userUsername u ==. val_ name)
-    (all_ (_dukkalessUsers dukkhalessDb))
+updateIO :: forall m a . MonadIO m => a -> m (Update a)
+updateIO a = do
+      now <- liftIO $ getCurrentTime
+      pure $ Update (T.LastUpdated now) a
+
+runStatement
+      :: MonadIO m
+      => MonadReader r m
+      => T.HasConnectionPool r HP.Pool
+      => a
+      -> Statement.Statement a b
+      -> m (Either HP.UsageError b)
+runStatement a statement = do
+      pool <- asks (^. T.connectionPool)
+      liftIO $ HP.use pool (Session.statement a statement)

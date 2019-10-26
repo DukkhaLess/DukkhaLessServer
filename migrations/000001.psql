@@ -1,0 +1,8 @@
+CREATE TABLE "users" (
+  "userUuid" uuid CONSTRAINT userUuidPrimaryKey PRIMARY KEY,
+  "userUsername" varchar(256) UNIQUE NOT NULL,
+  "userHashedPassword" varchar(512) NOT NULL,
+  "userPublicKey" varchar(512) UNIQUE NOT NULL,
+  "userLastUpdated" timestamptz DEFAULT current_timestamp NOT NULL,
+  "userCreatedAt" timestamptz DEFAULT current_timestamp NOT NULL
+);

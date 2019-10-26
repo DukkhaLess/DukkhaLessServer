@@ -1,0 +1,8 @@
+CREATE TABLE "journalEntries" (
+  "journalUuid" uuid CONSTRAINT journalUuidPrimaryKey PRIMARY KEY,
+  "userUuid" uuid REFERENCES "users"("userUuid"),
+  "journalTitleContent" text NOT NULL,
+  "journalContent" text NOT NULL,
+  "journalLastUpdated" timestamptz DEFAULT current_timestamp NOT NULL,
+  "journalCreatedAt" timestamptz DEFAULT current_timestamp NOT NULL
+);

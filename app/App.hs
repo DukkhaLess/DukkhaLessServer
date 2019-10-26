@@ -1,180 +1,125 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-type-defaults #-}
 module App where
 
 import           Protolude                      ( IO
                                                 , ($)
                                                 , (.)
                                                 , (>>=)
-                                                , (^)
-                                                , Either
                                                 , Applicative
-                                                , flip
                                                 , either
-                                                , (<&>)
                                                 , (&)
                                                 , pure
                                                 , liftIO
-                                                , (<$>)
                                                 , const
-                                                , Int
                                                 , Maybe(..)
+                                                , Either(..)
+                                                , show
+                                                , MonadIO
+                                                , putStrLn
                                                 )
+import           App.Middleware
 import qualified Control.Exception             as E
 import           Control.Lens
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Maybe      ( MaybeT(..) )
-import           Control.Monad.Trans.Except     ( ExceptT(..)
-                                                , runExceptT
-                                                )
+import           Control.Monad.Trans.Except     ( runExceptT )
 import           Control.Monad.Trans            ( lift )
-import           Crypto.Classes.Exceptions      ( genBytes )
-import           Crypto                         ( signJwt
-                                                , verifyPassword
-                                                )
+import qualified Crypto                        as Crypto
 import qualified Crypto.Argon2                 as Argon2
 import           Data.Default                   ( def )
-import           Data.Text.Lazy                 ( unpack )
-import qualified Data.ByteString.Lazy          as BL
 import           Data.ByteString                ( ByteString )
-import qualified Database.Beam.Postgres        as Pg
+import           Data.String                    ( String )
 import           Domain                         ( newUser
                                                 , createAccessToken
                                                 )
-import           Control.Concurrent.STM         ( TVar
-                                                , atomically
-                                                , readTVarIO
-                                                , modifyTVar'
-                                                , newTVarIO
-                                                )
-import           Jose.Jwt                       ( unJwt )
+import           Hasql.Pool                    as HP
 import           Network.Wai                    ( Middleware )
-import           Network.Wai.Middleware.RequestLogger
-                                                ( logStdoutDev
-                                                , logStdout
-                                                )
-import           Network.Wai.Middleware.Rewrite ( PathsAndQueries
-                                                , rewritePureWithQueries
-                                                )
+
 import           Network.Wai.Middleware.Gzip    ( gzip )
-import           Network.HTTP.Types.Header      ( RequestHeaders )
 import           Network.HTTP.Types.Status
 import           Web.Scotty.Trans
-import           Types
+import qualified API.Types                     as API
+import qualified Types                         as T
 import qualified Conf                          as Conf
 import           Conf                           ( Environment(..) )
-import qualified Data.Configurator             as C
 import qualified Schema                        as Schema
-import           System.Entropy                 ( getEntropy )
-import           Crypto.Random.DRBG             ( HashDRBG
-                                                , GenAutoReseed
-                                                , newGenAutoReseed
-                                                )
 import qualified Data.Text.Lazy                as LT
-import           Crypto.Random                  ( GenError )
+import qualified Queries                       as Q
+import           Util                           ( foldMapA )
 
 app :: Conf.Environment -> IO ()
 app env = void $ runMaybeT $ do
-  conf <- MaybeT
-    (C.load [C.Required $ unpack $ Conf.confFileName env] >>= Conf.makeConfig)
+  conf <- Conf.buildConfig env
+  putStrLn ("Acquiring database connection pool" :: String)
   lift $ E.bracket
-    ( Pg.connect
+    ( HP.acquire
     $ Conf.connectInfo (Conf.databaseConfig conf) Conf.applicationAccount
     )
-    Pg.close
+    HP.release
     (\conn -> do
-      Schema.runMigrations conn
-      let logger =
-            (case env of
-              Production  -> logStdout
-              Development -> logStdoutDev
-            )
-      eitherErrAppState <- runExceptT (generateInitialAppState conf)
-      initialAppState   <- either E.throwIO return eitherErrAppState
-      sync              <- newTVarIO initialAppState
-      let runActionToIO m = runReaderT (runWebM m) sync
-      scottyT 4000 runActionToIO $ app' conn logger
+      putStrLn ("Connection pool acquired, running migrations" :: String)
+      migrationResult <- Schema.runMigrations
+        (Conf.migrationsPath $ Conf.databaseConfig conf)
+        conn
+      _     <- either (fail . show) pure migrationResult
+      putStrLn ("Migrations complete. Preparing initial app state" :: String)
+      store <- Crypto.createStoreOrFail
+      let initialAppState = T.AppState store (Conf.signingKey conf) conn
+      putStrLn ("Initial state established, starting scotty app" :: String)
+      let runActionToIO m = runReaderT (runWebM m) initialAppState
+      let logger = Conf.logger env
+      scottyT 4000 runActionToIO $ app' [logger]
     )
-
-data AppState =
-  AppState
-    { cryptoRandomGen :: GenAutoReseed HashDRBG HashDRBG
-    , signingKey :: SigningKey
-    }
 
 {- A MonadTrans-like Monad for our application.
   Its kind is too refined however to allow this to have a MonadTrans instance
 -}
-newtype WebM a = WebM { runWebM :: ReaderT (TVar AppState) IO a }
-  deriving (Applicative, Functor, Monad, MonadIO, MonadReader (TVar AppState))
+newtype WebM a = WebM { runWebM :: ReaderT T.AppState IO a }
+  deriving (Applicative, Functor, Monad, MonadIO, MonadReader T.AppState)
 
--- | Lift a WebM a into another monad.
 webM :: MonadTrans t => WebM a -> t WebM a
 webM = lift
 
-gets :: (AppState -> b) -> WebM b
-gets f = f <$> (ask >>= liftIO . readTVarIO)
-
-modify :: (AppState -> AppState) -> WebM ()
-modify f = ask >>= liftIO . atomically . flip modifyTVar' f
-
-generateInitialAppState :: Conf.Config -> ExceptT GenError IO AppState
-generateInitialAppState conf = do
-  initialEntropy <- lift $ getEntropy 256
-  gen            <- ExceptT $ return
-    (newGenAutoReseed initialEntropy (2 ^ 48) :: Either
-        GenError
-        (GenAutoReseed HashDRBG HashDRBG)
-    )
-  return $ AppState gen (Conf.signingKey conf)
-
 type ActionT' = ActionT LT.Text WebM
 
-app' :: Pg.Connection -> Middleware -> ScottyT LT.Text WebM ()
-app' conn logger = do
-  middleware $ rewritePureWithQueries removeApiPrefix
-  middleware logger
+app' :: [Middleware] -> ScottyT LT.Text WebM ()
+app' additionalMiddleware = do
+  middleware removePrefixMiddleware
+  foldMapA middleware additionalMiddleware
   middleware $ gzip def
   post "/login" $ do
-    loginUser   <- jsonData :: ActionT' LoginUser
-    desiredUser <- liftIO
-      $ Schema.findUserbyUsername (loginUser ^. username) conn
+    loginUserReq <- jsonData :: ActionT' API.LoginUser
+    desiredUser  <- lift
+      $ Schema.runStatement (loginUserReq ^. API.username) Q.findUserByUsername
     case desiredUser of
-      Just user -> do
-        let correctPassword  = HashedPassword $ Schema._userHashedPassword user
-        let providedPassword = loginUser ^. rawPassword
+      Right (Just (Schema.Timestamped _ _ user)) -> do
+        let correctPassword  = user ^. Schema.userHashedPassword
+        let providedPassword = loginUserReq ^. API.rawPassword
         let passwordVerificationResult =
-              verifyPassword correctPassword providedPassword
+              Crypto.verifyPassword correctPassword providedPassword
         case passwordVerificationResult of
-          Argon2.Argon2Ok -> respondWithAuthToken user
+          Argon2.Argon2Ok -> respondWithAuthToken (user ^. Schema.userUserId)
           _               -> status status400
-      Nothing -> status status400
+      _ -> status status400
 
   post "/register" $ do
-    registerUser <- jsonData :: ActionT' RegisterUser
-    salt         <- nextBytes 16
-    user         <-
-      newUser registerUser (PasswordSalt salt)
+    registerUserReq <- jsonData :: ActionT' API.RegisterUser
+    salt            <- lift $ Crypto.nextBytes 16
+    user            <-
+      newUser registerUserReq (T.PasswordSalt salt)
       &   runExceptT
       &   liftIO
       >>= either E.throw pure
-    liftIO $ Schema.insertUser user conn
-    respondWithAuthToken user
+    result <- lift $ Schema.runStatement user Q.insertUser
+    case result of
+      Left err -> do
+        putStrLn (show err :: ByteString)
+        status status400
+      Right _ ->
+        respondWithAuthToken (user ^. Schema.createT . Schema.userUserId)
 
-respondWithAuthToken :: Schema.User -> ActionT' ()
-respondWithAuthToken user = do
-  token           <- liftIO $ createAccessToken user
-  tokenSigningKey <- webM (gets signingKey)
-  either (const (status status500)) (raw . BL.fromStrict)
-    $   unJwt
-    <$> signJwt tokenSigningKey token
-
-nextBytes :: Int -> ActionT' ByteString
-nextBytes byteCount = do
-  (salt, nextGen) <- webM (gets cryptoRandomGen <&> genBytes byteCount)
-  webM $ modify $ \st -> st { cryptoRandomGen = nextGen }
-  pure salt
-
-removeApiPrefix :: PathsAndQueries -> RequestHeaders -> PathsAndQueries
-removeApiPrefix ("api" : tail, queries) _ = (tail, queries)
-removeApiPrefix paq                     _ = paq
+respondWithAuthToken :: T.UserId -> ActionT' ()
+respondWithAuthToken userId = do
+  token           <- liftIO $ createAccessToken userId
+  tokenSigningKey <- webM $ asks (^. T.signingKey)
+  either (const (status status500)) json (Crypto.signJwt tokenSigningKey token)
